@@ -27,9 +27,18 @@ check_installation() {
 check_installation
 
 
+# Check the Xcode CLI Tools developer directory
+echo "Checking developer directory..."
+xcode_dir=$(xcode-select --print-path 1>&1 2>/dev/null)
+if [[ ! -d "$xcode_dir" ]]; then
+  echo "No developer directory. Attempting to reset..."
+  sudo xcode-select --reset
+fi
+
+
 # Check for Xcode Command Line Tools updates
 echo "Checking for updates to Xcode Command Line Tools..."
-softwareupdate -l | grep "\*.*Command Line" &>/dev/null
+softwareupdate --list | grep "\*.*Command Line" &>/dev/null
 if [ $? -eq 0 ]; then
     echo "Updates found for Xcode Command Line Tools. Installing updates..."
     softwareupdate -i -a
