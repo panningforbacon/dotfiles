@@ -67,8 +67,8 @@ if ! command_exists brew; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   
   echo "Removing core & cask package taps to save space"
-  u $SUDO_USER -c "brew untap homebrew/core"
-  u $SUDO_USER -c "brew untap homebrew/cask"
+  su $SUDO_USER -c "brew untap homebrew/core"
+  su $SUDO_USER -c "brew untap homebrew/cask"
 else
   echo "Homebrew already installed. Checking for updates"
   su $SUDO_USER -c "brew update"
