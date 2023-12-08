@@ -13,13 +13,13 @@ function command_exists {
   type "$command_name" &>/dev/null
 }
 
+chmod +x install_Xcode_CLI_Tools.sh
+./install_Xcode_CLI_Tools.sh
 
-echo ""
-echo "Ensuring script running with root privileges"
-if [ "$EUID" -ne 0 ]; then
-  sudo bash "$0" "$@"
-  exit $?
-fi
+chmod +x install_homebrew.sh
+./install_homebrew.sh
+
+
 
 echo ""
 echo "=== Xcode Command Line Tools ==="
