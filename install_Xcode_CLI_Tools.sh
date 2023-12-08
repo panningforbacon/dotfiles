@@ -8,7 +8,7 @@ fi
 
 
 # Check if Xcode Command Line Tools are already installed
-xcode-select -p &>/dev/null
+xcode-select --print-path &>/dev/null
 if [ $? -ne 0 ]; then
     echo "Xcode Command Line Tools not found. Installing them now."
     xcode-select --install
