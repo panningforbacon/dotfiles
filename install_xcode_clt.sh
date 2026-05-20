@@ -1,78 +1,112 @@
 #!/usr/bin/env bash
+# =============================================================================
+# modules/xcode.sh — Install / verify Xcode Command Line Tools
+# =============================================================================
+
 set -euo pipefail
 
-# ─────────────────────────────────────────────
-# install_xcode_clt.sh
-# Force-reinstall Xcode Command Line Tools.
-# Must be run with sudo.
-# ─────────────────────────────────────────────
-
-CLT_DIR="/Library/Developer/CommandLineTools"
-CLANG_BIN="${CLT_DIR}/usr/bin/clang"
+source "$(dirname "${BASH_SOURCE[0]}")/logging.sh"
 
 
-# ── Preflight ─────────────────────────────────
+# ── state detectors ───────────────────────────────────────────────────────────
 
-sudo -n true 2>/dev/null || { echo "ERROR: This script must be run with sudo."; exit 1; }
+_is_xcode_installed() {
+  local path
+  path="$(xcode-select -p 2>/dev/null)" || return 1
+  [[ -d "$path" ]]
+}
 
-echo
-echo "═══════════════════════════════════════"
-echo " Xcode Command Line Tools — Install"
-echo "═══════════════════════════════════════"
-echo
+_is_xcode_working() {
+  command -v clang &>/dev/null
+}
 
 
-# ── Remove existing install ───────────────────
+# ── install / uninstall ───────────────────────────────────────────────────────
 
-skip_install=false
+_uninstall_xcode_clt() {
+  log_warn "Removing Xcode CLT at $(xcode-select -p 2>/dev/null || echo '<unknown>')..."
+  sudo rm -rf "$(xcode-select -p 2>/dev/null)" 2>/dev/null || true
+  sudo xcode-select --reset 2>/dev/null || true
+  log_success "Xcode CLT removed."
+}
 
-if [[ -d "${CLT_DIR}" ]]; then
-    echo "Found existing installation at: ${CLT_DIR}"
+_install_xcode_clt() {
+  log_info "Triggering Xcode CLT install prompt..."
+  xcode-select --install 2>/dev/null || true
+
+  echo ""
+  log_warn "Complete the install dialog that appeared, then press Enter to continue."
+  read -r -p ""
+
+  log_info "Accepting Xcode license..."
+  sudo xcodebuild -license accept 2>/dev/null || true
+}
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+log_info "====================================================================="
+log_info "Starting Xcode CLT installation and verification..."
+log_info "====================================================================="
+
+# Determine action.
+action="install"
+
+if _is_xcode_installed; then
+  if _is_xcode_working; then
+    log_success "Xcode Command Line Tools is installed and appears to be working."
+    echo ""
+    echo "  [k] Keep existing         (skip, continue installer)"
+    echo "  [r] Remove and reinstall  (force version reset)"
+    echo "  [x] Cancel                (exit installer)"
+    echo ""
+
     while true; do
-        read -rp "Remove and force a version reset? Enter [Y]es, [N]o, or [C]ancel: " choice
-        choice="$(echo "${choice}" | tr '[:upper:]' '[:lower:]')"
-        case "${choice}" in
-            y|yes|"")
-                rm -rf "${CLT_DIR}"
-                break
-                ;;
-            n|no)
-                skip_install=true
-                break
-                ;;
-            c|cancel)
-                echo "Cancelled."
-                exit 0
-                ;;
-            *)
-                echo "  → Enter Y, N, or C."
-                ;;
-        esac
+      read -r -p "  Choose [k/r/x]: " choice
+      case "$(echo "$choice" | tr '[:upper:]' '[:lower:]')" in
+        k) action="skip";      break ;;
+        r) action="reinstall"; break ;;
+        x) action="cancel";    break ;;
+        *) log_warn "Invalid choice. Enter k, r, or x." ;;
+      esac
     done
+
+  else
+    log_warn "Xcode Command Line Tools appears to be installed but is not working."
+    log_info "Action: will attempt uninstall and reinstall automatically."
+    action="reinstall"
+  fi
+
+else
+  log_info "Xcode Command Line Tools not found. Proceeding with fresh install."
 fi
 
+# Execute action.
+case "$action" in
+  skip)
+    log_skip "Keeping existing Xcode CLT. Skipping install."
+    exit 0
+    ;;
+  cancel)
+    log_warn "Cancelled by user."
+    exit 1
+    ;;
+  reinstall)
+    _uninstall_xcode_clt
+    _install_xcode_clt
+    ;;
+  install)
+    _install_xcode_clt
+    ;;
+esac
 
-# ── Install ───────────────────────────────────
-
-if [[ "${skip_install}" == false ]]; then
-    echo "→ Complete the GUI dialog to continue ...."
-    xcode-select --install 2>/dev/null || true
-
-    echo "→ Waiting for installation to complete ..."
-    until [[ -d "${CLT_DIR}" ]]; do
-        sleep 5
-    done
+# Verify outcome.
+if _is_xcode_installed && _is_xcode_working; then
+  log_success "Xcode CLT path: $(xcode-select -p)"
+  log_success "clang: $(command -v clang) — $(clang --version 2>&1 | head -1)"
+  log_success "Xcode CLT verified and ready."
+else
+  ! _is_xcode_installed && log_error "xcode-select path missing or directory not found."
+  ! _is_xcode_working   && log_error "clang not found on PATH."
+  die "Xcode CLT verification failed. Aborting."
 fi
-
-
-# ── Verify ────────────────────────────────────
-
-[[ -d "${CLT_DIR}" ]]   || { echo "ERROR: Directory not found: ${CLT_DIR}" >&2; exit 1; }
-echo "✓ Directory exists : ${CLT_DIR}"
-
-[[ -x "${CLANG_BIN}" ]] || { echo "ERROR: clang not executable at: ${CLANG_BIN}" >&2; exit 1; }
-echo "✓ clang accessible : $(${CLANG_BIN} --version | head -1)"
-
-
-echo
-echo "Installation complete."
