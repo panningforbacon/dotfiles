@@ -27,7 +27,7 @@ _uninstall_xcode_clt() {
   log_warn "Removing Xcode CLT at $(xcode-select -p 2>/dev/null || echo '<unknown>')..."
   sudo rm -rf "$(xcode-select -p 2>/dev/null)" 2>/dev/null || true
   sudo xcode-select --reset 2>/dev/null || true
-  log_success "Xcode CLT removed."
+  log_info "Xcode CLT removed."
 }
 
 _install_xcode_clt() {
@@ -54,7 +54,7 @@ action="install"
 
 if _is_xcode_installed; then
   if _is_xcode_working; then
-    log_success "Xcode Command Line Tools is installed and appears to be working."
+    log_info "Xcode Command Line Tools is installed and appears to be working."
     echo ""
     echo "  [k] Keep existing         (skip, continue installer)"
     echo "  [r] Remove and reinstall  (force version reset)"
@@ -102,9 +102,9 @@ esac
 
 # Verify outcome.
 if _is_xcode_installed && _is_xcode_working; then
-  log_success "Xcode CLT path: $(xcode-select -p)"
-  log_success "clang: $(command -v clang) — $(clang --version 2>&1 | head -1)"
-  log_success "Xcode CLT verified and ready."
+  log_info "Xcode CLT path: $(xcode-select -p)"
+  log_info "clang: $(command -v clang) — $(clang --version 2>&1 | head -1)"
+  log_info "Xcode CLT verified and ready."
 else
   ! _is_xcode_installed && log_error "xcode-select path missing or directory not found."
   ! _is_xcode_working   && log_error "clang not found on PATH."
