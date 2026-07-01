@@ -6,7 +6,7 @@ readonly USE_XCODE_SELECT_ONLY=false
 readonly INSTALLER_TIMEOUT_SECONDS=30
 readonly CLT_DIR="/Library/Developer/CommandLineTools"
 
-DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "$DOTFILES_DIR/scripts/lib.sh"
  
 trap 'err_trap' ERR

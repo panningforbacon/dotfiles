@@ -80,3 +80,10 @@ err_trap() {
   printf "        line : %s\n"                                                      "$line"      >&2
   printf "        cmd  : %s${_CLR_RESET}\n"                                         "$cmd"       >&2
 }
+
+
+# ── Guard Clauses ────────────────────────────────────────────────────────────────────
+
+require_macos() {
+  [[ "$(uname -s)" == "Darwin" ]] || fail "This script must be run on macOS."
+}
