@@ -13,7 +13,8 @@ trap 'err_trap' ERR
 
 [[ "$(uname)" == "Darwin" ]] || die "Aborting: script only runs on macOS"
 
-# ── Flags ─────────────────────────────────────────────────────────────────────
+
+# ── Flags ────────────────────────────────────────────────────────────────────
 
 force=false
 
@@ -43,20 +44,7 @@ installation_works() {
 }
 
 
-# ── Install/Uninstall ────────────────────────────────────────────────────────────────────
-
-uninstall() {
-  info "Uninstall CLT: Removing Command Line Tools directory..."
-  sudo rm -rf "$CLT_DIR"
-  sudo xcode-select --reset
-
-  info "Uninstall CLT: Forgetting CLT packages from pkgutil..."
-  sudo pkgutil --forget com.apple.pkg.CLTools_Executables 2>/dev/null || true
-  sudo pkgutil --forget com.apple.pkg.CLTools_SDK_macOS 2>/dev/null || true
-  sudo pkgutil --forget com.apple.pkg.CLTools_macOS_SDK 2>/dev/null || true
-  sudo pkgutil --forget com.apple.pkg.DeveloperToolsCLI 2>/dev/null || true
-}
-
+# ── Install ────────────────────────────────────────────────────────────────────
 
 _install_via_softwareupdate() {
   # Apple convention: this exact path signals softwareupdate to list CLT.
@@ -147,36 +135,72 @@ install() {
 }
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+# ── Uninstall ────────────────────────────────────────────────────────────────────
+
+uninstall() {
+  info "Uninstalling Xcode Command Line Tools..."
+
+  # Reversible first, then the destructive part.
+  sudo xcode-select --reset 2>/dev/null || warn "xcode-select --reset failed (non-fatal)"
+  sudo rm -rf "$CLT_DIR"
+
+  # Best-effort receipt cleanup; missing packages aren't an error.
+  local pkg
+  for pkg in \
+    com.apple.pkg.CLTools_Executables \
+    com.apple.pkg.CLTools_SDK_macOS \
+    com.apple.pkg.CLTools_macOS_SDK \
+    com.apple.pkg.DeveloperToolsCLI
+  do
+    sudo pkgutil --forget "$pkg" 2>/dev/null || true
+  done
+
+  # Assert the postcondition instead of trusting exit codes.
+  installation_exists && die "Uninstall failed: $CLT_DIR still present"
+
+  info "Uninstallation complete."
+}
+
+
+# ── Main ────────────────────────────────────────────────────────────────────
 
 section "Xcode Command Line Tools Installation"
 
 info "Checking for existing installation..."
 
-needs_install=false
-if installation_exists && installation_works; then
-  info "Existing installation: exits and works"
-  if $force; then
-    info "Flat -f/--force found. Forcing a fresh reinstall..."
-    needs_install=true
+action_plan=""
+if installation_exists; then
+  info "Existing installation: exists"
+  if installation_works; then
+    info "Existing installation: works"
+    if $force; then
+      info "Argument -f/--force found. Forcing a fresh reinstall..."
+      action_plan="FORCE_INSTALL"
+    else
+      action_plan="NO_INSTALL"
+    fi
   else
-    info "Skipping installation."
+    info "Existing installation: exists, but not working"
+    info "Reinstalling..."
+    action_plan="REINSTALL"
   fi
-elif installation_exists && ! installation_works; then
-  info "Existing installation: exists, but not working"
-  info "Reinstalling..."
-  needs_install=true
 else
-  info "No install found; installing..."
-  needs_install=true
+  info "No install found. Installing..."
+  action_plan="INSTALL"
 fi
 
-if $needs_install; then
-  if installation_exists; then
-    uninstall || die "Uninstall failed";
-  fi
-  install || die "Install failed"
-  installation_exists && installation_works || die "Install verification failed"
-fi
+case "$action_plan" in
+  "FORCE_INSTALL"|"REINSTALL")
+    uninstall || die "Uninstall failed"
+    install || die "Install failed"
+    installation_exists && installation_works || die "Install verification failed"
+    ;;
+  "INSTALL")
+    install || die "Install failed"
+    installation_exists && installation_works || die "Install verification failed"
+    ;;
+  "NO_INSTALL")
+    ;;
+esac
 
 info "Xcode Command Line Tools Installation complete"
