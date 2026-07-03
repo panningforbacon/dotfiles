@@ -2,16 +2,17 @@
 
 set -euo pipefail
 
-readonly USE_XCODE_SELECT_ONLY=false
-readonly INSTALLER_TIMEOUT_SECONDS=30
-readonly CLT_DIR="/Library/Developer/CommandLineTools"
-
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "$DOTFILES_DIR/scripts/lib.sh"
  
 trap 'err_trap' ERR
 
-[[ "$(uname)" == "Darwin" ]] || die "Aborting: script only runs on macOS"
+
+# ── Settings ────────────────────────────────────────────────────────────────────
+
+readonly USE_XCODE_SELECT_ONLY=false
+readonly INSTALLER_TIMEOUT_SECONDS=30
+readonly CLT_DIR="/Library/Developer/CommandLineTools"
 
 
 # ── Flags ────────────────────────────────────────────────────────────────────
@@ -165,6 +166,7 @@ uninstall() {
 # ── Main ────────────────────────────────────────────────────────────────────
 
 section "Xcode Command Line Tools Installation"
+require_macos
 
 info "Checking for existing installation..."
 
@@ -203,4 +205,4 @@ case "$action_plan" in
     ;;
 esac
 
-info "Xcode Command Line Tools Installation complete"
+section_end "Xcode Command Line Tools installation complete"

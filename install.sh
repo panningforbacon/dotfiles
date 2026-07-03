@@ -13,6 +13,7 @@ trap 'err_trap' ERR
 
 ALL_MODULES=(
   xcode.sh
+  homebrew.sh
 )
 
 
@@ -30,7 +31,7 @@ run_module() {
   local script="$DOTFILES_DIR/modules/${name}"
  
   if [[ ! -f "$script" ]]; then
-    fail "Module not found: $script"
+    error "Module not found: $script"
   fi
  
   info "Starting module: $name"

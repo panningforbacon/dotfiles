@@ -56,7 +56,18 @@ section() {
   printf "\n"
   printf "╔%s╗\n" "$bar"
   printf "║  %-$(( inner - 2 ))s║\n" "$title"
+  # printf "╚%s╝\n" "$bar"
+  printf "╟%s╢\n" "$bar"
+}
+
+section_end() {
+  local title="$*"
+  local inner=$(( LOG_WIDTH - 2 ))
+  local bar; bar="$(printf "%${inner}s" | tr ' ' '=')"
+  printf "╟%s╢\n" "$bar"
+  printf "║  %-$(( inner - 2 ))s║\n" "$title"
   printf "╚%s╝\n" "$bar"
+  printf "\n"
 }
 
 log() {
@@ -87,3 +98,14 @@ err_trap() {
 require_macos() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "This script must be run on macOS."
 }
+
+require_cmd() {
+  command -v "$1" &>/dev/null \
+    || fail "Required command not found: '$1'. Check your dependency order."
+}
+ 
+# command_exists <cmd> — boolean, no side effects
+command_exists() {
+  command -v "$1" &>/dev/null
+}
+ 
