@@ -15,6 +15,7 @@ ALL_MODULES=(
   xcode.sh
   homebrew.sh
   brew_bundle.sh
+  shell.sh
 )
 
 

@@ -3,8 +3,8 @@
 brew "zsh"
 brew "git"
 
-# brew "zsh-autosuggestions"
-# brew "zsh-syntax-highlighting"
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
 
 # # LANGUAGES
 # # ============================
