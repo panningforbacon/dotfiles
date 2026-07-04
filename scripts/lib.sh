@@ -31,6 +31,10 @@ die() {
   error "$*"; exit 1
 }
 
+dim() {
+  printf "${_CLR_DIM}        %s${_CLR_RESET}\n" "$*"
+}
+
 
 # ── Section logging ────────────────────────────────────────────────────────────────────
 
@@ -52,7 +56,6 @@ section() {
   local title="$*"
   local inner=$(( LOG_WIDTH - 2 ))
   local bar; bar="$(printf "%${inner}s" | tr ' ' '═')"  # repeat '═' to fill the width
-
   printf "\n"
   printf "╔%s╗\n" "$bar"
   printf "║  %-$(( inner - 2 ))s║\n" "$title"
@@ -95,10 +98,7 @@ err_trap() {
 
 # ── Guard Clauses ────────────────────────────────────────────────────────────────────
 
-require_macos() {
-  [[ "$(uname -s)" == "Darwin" ]] || fail "This script must be run on macOS."
-}
-
+# require_cmd <cmd> — fail loudly if a command is not on PATH
 require_cmd() {
   command -v "$1" &>/dev/null \
     || fail "Required command not found: '$1'. Check your dependency order."
@@ -109,3 +109,12 @@ command_exists() {
   command -v "$1" &>/dev/null
 }
  
+# require_macos — fail if not running on macOS
+require_macos() {
+  [[ "$(uname -s)" == "Darwin" ]] || fail "This script must be run on macOS."
+}
+ 
+# require_file <path> — fail if a required file is missing
+require_file() {
+  [[ -f "$1" ]] || fail "Required file not found: $1"
+}

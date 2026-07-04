@@ -14,6 +14,7 @@ trap 'err_trap' ERR
 ALL_MODULES=(
   xcode.sh
   homebrew.sh
+  brew_bundle.sh
 )
 
 
