@@ -16,6 +16,7 @@ ALL_MODULES=(
   homebrew.sh
   brew_bundle.sh
   shell.sh
+  defaults.sh
 )
 
 
