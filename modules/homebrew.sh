@@ -61,4 +61,4 @@ fi
 
 ensure_brew_on_path
 
-section_end "Homebrew installation complete"
+info "Homebrew installation complete"

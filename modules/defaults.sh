@@ -126,7 +126,8 @@ osascript -e 'tell application "System Settings" to quit'    2>/dev/null || true
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nDock...\n"
+printf "\n"
+printf "Dock...\n"
 
 # Icon size in pixels
 set_int "com.apple.dock" "tilesize" "48"
@@ -152,7 +153,8 @@ set_bool "com.apple.dock" "mru-spaces" "false"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nFinder...\n"
+printf "\n"
+printf "Finder...\n"
 
 # Show all filename extensions
 set_bool "com.apple.finder" "AppleShowAllExtensions" "true"
@@ -192,7 +194,8 @@ set_str "com.apple.finder" "NewWindowTarget" "PfHm"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nMenu bar and system UI...\n"
+printf "\n"
+printf "Menu bar and system UI...\n"
 
 # Show battery percentage
 set_bool "com.apple.menuextra.battery" "ShowPercent" "true"
@@ -206,7 +209,8 @@ set_bool "com.apple.menuextra.clock" "Show24Hour" "true"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nKeyboard...\n"
+printf "\n"
+printf "Keyboard...\n"
 
 # Key repeat rate (lower = faster; default 6, minimum 1)
 set_int "NSGlobalDomain" "KeyRepeat" "2"
@@ -235,7 +239,8 @@ set_int "NSGlobalDomain" "AppleKeyboardUIMode" "3"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nTrackpad...\n"
+printf "\n"
+printf "Trackpad...\n"
 
 # Enable tap to click (no physical press required)
 set_bool "com.apple.driver.AppleBluetoothMultitouch.trackpad" "Clicking" "true"
@@ -252,7 +257,8 @@ set_bool "com.apple.AppleMultitouchTrackpad" "TrackpadThreeFingerDrag" "true"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nScreen...\n"
+printf "\n"
+printf "Screen...\n"
 
 # Require password immediately after sleep or screen saver
 set_int "com.apple.screensaver" "askForPassword" "1"
@@ -275,7 +281,8 @@ set_int "NSGlobalDomain" "AppleFontSmoothing" "1"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nMission Control and Spaces...\n"
+printf "\n"
+printf "Mission Control and Spaces...\n"
 
 # Faster Mission Control animation
 set_float "com.apple.dock" "expose-animation-duration" "0.1"
@@ -289,7 +296,8 @@ set_bool "com.apple.dock" "mru-spaces" "false"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nTextEdit...\n"
+printf "\n"
+printf "TextEdit...\n"
 
 # Default to plain text, not rich text
 set_int "com.apple.TextEdit" "RichText" "0"
@@ -313,13 +321,14 @@ set_int "com.apple.ActivityMonitor" "SortDirection" "0"
 
 # ── App-specific defaults ────────────────────────────────────────────────────────────────────
 
-section "App-specific defaults"
+printf "\n"
+info "App-specific defaults (full disk access required for some apps)..."
 
 # Guard-clause
 require_full_disk_access || { die "Aborting: no FDA, writes would be silently discarded."; }
 
-
-printf "\nSafari (developer settings)...\n"
+printf "\n"
+printf "Safari (developer settings)...\n"
 
 # Enable the Develop menu
 set_bool "com.apple.Safari" "IncludeDevelopMenu" "true"
@@ -337,7 +346,8 @@ set_bool "com.apple.Safari" "AutoOpenSafeDownloads" "false"
 # restarted. We target only the processes whose domains we actually touched.
 # ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-printf "\nRestarting affected services...\n"
+printf "\n"
+info "Restarting affected services..."
 
 # Dock (Dock, Mission Control, autohide, spaces settings)
 killall Dock 2>/dev/null && dim "Restarted: Dock" || true
@@ -352,4 +362,5 @@ killall SystemUIServer 2>/dev/null && dim "Restarted: SystemUIServer" || true
 killall cfprefsd 2>/dev/null && dim "Flushed: cfprefsd" || true
 
 
+printf "\n"
 info "macOS defaults applied. Some settings require a logout/login to take full effect."

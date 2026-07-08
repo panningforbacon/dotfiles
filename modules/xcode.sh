@@ -205,4 +205,4 @@ case "$action_plan" in
     ;;
 esac
 
-section_end "Xcode Command Line Tools installation complete"
+info "Xcode Command Line Tools installation complete"

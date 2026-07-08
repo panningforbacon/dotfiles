@@ -67,4 +67,4 @@ else
   info "All Brewfile entries satisfied."
 fi
 
-section_end "Homebrew Bundle complete"
+info "Homebrew Bundle complete"

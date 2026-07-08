@@ -82,7 +82,6 @@ else
   info "Default shell set to: $ZSH_BIN"
 fi
 
-section_end "Shell: zsh complete"
 
 # -----------------------------------------------------------------------------
 # starship
@@ -108,8 +107,6 @@ if [[ -f "$STARSHIP_CONFIG_SRC" ]]; then
 else
   warn "starship config not found at $STARSHIP_CONFIG_SRC — create it before running symlinks.sh."
 fi
-
-section_end "Shell: starship complete"
 
 # -----------------------------------------------------------------------------
 # zsh plugins
@@ -142,4 +139,5 @@ if $all_plugins_ok; then
   info "All zsh plugins present."
 fi
 
-section_end "Shell: zsh plugins complete"
+
+info "Shell setup complete"

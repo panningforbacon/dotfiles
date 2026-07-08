@@ -158,4 +158,4 @@ safe_symlink \
   "$HOME/.hushlogin"
 
 
-section_end "Symlinks complete"
+info "Symlinks complete"
