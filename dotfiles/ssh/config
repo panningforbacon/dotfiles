@@ -1,0 +1,48 @@
+# =============================================================================
+# ~/.ssh/config
+# SSH client configuration.
+# No secrets here — key paths are local conventions, not credentials.
+# Permissions: this file must be chmod 600 (enforced by symlinks.sh).
+# =============================================================================
+
+# =============================================================================
+# Global defaults — applied to all hosts
+# =============================================================================
+
+Host *
+  # Add keys to the macOS Keychain on first use so you're not prompted again
+  AddKeysToAgent    yes
+  UseKeychain       yes
+
+  # Prefer ed25519 keys; fall back gracefully
+  IdentityFile      ~/.ssh/id_ed25519
+  IdentityFile      ~/.ssh/id_rsa
+
+  # Keep connections alive — avoids dropped sessions on idle links
+  ServerAliveInterval  60
+  ServerAliveCountMax  3
+
+  # Reuse existing connections — faster successive SSH/SCP/rsync to the same host
+  ControlMaster     auto
+  ControlPath       ~/.ssh/sockets/%r@%h:%p
+  ControlPersist    10m
+
+# =============================================================================
+# GitHub
+# =============================================================================
+
+Host github.com
+  HostName        github.com
+  User            git
+  IdentityFile    ~/.ssh/id_ed25519
+
+# =============================================================================
+# Add additional hosts below.
+# Example:
+#
+# Host myserver
+#   HostName      203.0.113.10
+#   User          deploy
+#   IdentityFile  ~/.ssh/id_ed25519_myserver
+#   Port          22
+# =============================================================================

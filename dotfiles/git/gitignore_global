@@ -1,0 +1,51 @@
+# =============================================================================
+# ~/.gitignore_global
+# Applied to every repo on this machine via core.excludesfile.
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+ehthumbs.db
+Thumbs.db
+
+# Editor artifacts
+.vscode/
+!.vscode/settings.json    # allow repo-level vscode settings if intentional
+!.vscode/extensions.json  # allow recommended extensions list
+.cursor/
+*.swp
+*.swo
+*~
+.idea/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Dependency directories (belt-and-braces; each repo should have its own .gitignore)
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Build output
+dist/
+build/
+*.o
+*.a
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS-generated
+Desktop.ini

@@ -1,0 +1,105 @@
+# =============================================================================
+# starship.toml
+# Starship prompt configuration.
+# Docs: https://starship.rs/config/
+# =============================================================================
+
+# Prompt format — left side
+format = """
+$directory\
+$git_branch\
+$git_status\
+$git_state\
+$python\
+$node\
+$rust\
+$fill\
+$cmd_duration\
+$time\
+$line_break\
+$character"""
+
+# =============================================================================
+# Directory
+# =============================================================================
+
+[directory]
+truncation_length    = 4
+truncate_to_repo     = true    # truncate relative to git root when inside a repo
+style                = "bold cyan"
+read_only            = " ro"
+home_symbol          = "~"
+
+# =============================================================================
+# Git
+# =============================================================================
+
+[git_branch]
+symbol    = " "
+style     = "bold purple"
+format    = "[$symbol$branch(:$remote_branch)]($style) "
+
+[git_status]
+format    = "([$all_status$ahead_behind]($style) )"
+style     = "bold red"
+conflicted = "!"
+ahead      = "+"
+behind     = "-"
+diverged   = "+-"
+untracked  = "?"
+stashed    = "$"
+modified   = "~"
+staged     = "+"
+renamed    = "»"
+deleted    = "x"
+
+[git_state]
+format = "[$state($progress_current/$progress_total)]($style) "
+style  = "bold yellow"
+
+# =============================================================================
+# Runtimes — only shown when relevant files are present
+# =============================================================================
+
+[python]
+symbol           = " "
+format           = "[$symbol$pyenv_prefix($version)( $virtualenv)]($style) "
+style            = "bold yellow"
+detect_files     = ["pyproject.toml", "requirements.txt", ".python-version", "uv.lock"]
+detect_folders   = [".venv"]
+
+[nodejs]
+symbol       = " "
+style        = "bold green"
+detect_files = ["package.json", ".nvmrc", ".node-version"]
+
+[rust]
+symbol = " "
+style  = "bold red"
+
+# =============================================================================
+# Right side
+# =============================================================================
+
+[fill]
+symbol = " "
+
+[cmd_duration]
+min_time          = 2000    # only show for commands taking >= 2s
+format            = "[$duration]($style) "
+style             = "bold yellow"
+show_milliseconds = false
+
+[time]
+disabled   = false
+format     = "[$time]($style)"
+style      = "dimmed white"
+time_format = "%H:%M"
+
+# =============================================================================
+# Prompt character
+# =============================================================================
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol   = "[>](bold red)"

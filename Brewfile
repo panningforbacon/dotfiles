@@ -1,23 +1,28 @@
 # CORE
 # ============================
-brew "zsh"
 brew "git"
 
-brew "zsh-autosuggestions"
-brew "zsh-syntax-highlighting"
+
+# Prompt, version manager, packaging
+brew "starship"
+brew "mise"
+brew "uv"
+
+# Interactive tooling
+brew "fzf"
+brew "zoxide"
+brew "antidote"
+
 
 # # LANGUAGES
-# # ============================
 # brew "node"
 # brew "python3"
 
 # # CLOUD SYNC
-# # ============================
 # cask "google-drive"
 # cask "onedrive"
 
 # DESKTOP APPS
-# ============================
 # cask "visual-studio-code"
 # cask "docker"
 # cask "github"

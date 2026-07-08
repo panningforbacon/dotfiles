@@ -1,0 +1,25 @@
+// =============================================================================
+// VS Code / Cursor keybindings
+// Scaffold — add your own below.
+// =============================================================================
+[
+  // Toggle terminal
+  {
+    "key": "ctrl+`",
+    "command": "workbench.action.terminal.toggleTerminal"
+  },
+  // Move line up/down without cutting
+  {
+    "key": "alt+up",
+    "command": "editor.action.moveLinesUpAction"
+  },
+  {
+    "key": "alt+down",
+    "command": "editor.action.moveLinesDownAction"
+  },
+  // Duplicate line
+  {
+    "key": "shift+alt+down",
+    "command": "editor.action.copyLinesDownAction"
+  }
+]

@@ -1,0 +1,31 @@
+## ~/.zsh_plugins.txt — antidote plugin manifest
+##
+## Format: one "user/repo" (GitHub) per line. Blank lines and # comments ok.
+## antidote compiles this list top-to-bottom into a single cached bundle.
+##
+## ---------------------------------------------------------------------------
+## LOAD ORDER:
+##   autosuggestions must load BEFORE the syntax highlighter, and the
+##   highlighter must be the LAST plugin in the file. If highlighting loads
+##   first, autosuggestions repaint on top of it and you get visual garbage.
+## ---------------------------------------------------------------------------
+
+## --- active: minimal interactive experience -------------------------------
+zsh-users/zsh-autosuggestions                # gray inline suggestion from history
+zdharma-continuum/fast-syntax-highlighting   # F-Sy-H — KEEP THIS LAST
+
+## --- optional: uncomment to add ------------------------------------------
+
+# zsh-users/zsh-history-substring-search   # type prefix + ↑/↓ to search history
+##   ^ if enabled, put it BEFORE fast-syntax-highlighting, and bind the
+##     up/down keys in .zshrc section 4.
+
+
+# zsh-users/zsh-completions              # extra completion definitions
+##   ^ load this BEFORE `compinit` runs — with antidote's static bundle that
+##     means it should be early; simplest is to keep compinit after antidote
+##     load (as configured) and this works fine near the top of the list.
+
+## Aesthetic/extra (each adds startup cost — add deliberately, not reflexively):
+# ael-code/zsh-colored-man-pages        # syntax-colored man pages
+# hlissner/zsh-autopair                 # auto-close quotes/brackets

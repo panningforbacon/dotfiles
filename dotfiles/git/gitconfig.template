@@ -1,0 +1,77 @@
+# =============================================================================
+# ~/.gitconfig
+# Generated from gitconfig.template by symlinks.sh — do not edit directly.
+# Edit dotfiles/gitconfig.template and re-run symlinks.sh.
+# =============================================================================
+
+[user]
+  name       = {{GIT_NAME}}
+  email      = {{GIT_EMAIL}}
+  # signingkey = {{GIT_SIGNING_KEY}}   # uncomment if using GPG/SSH commit signing
+
+[core]
+  editor        = code --wait
+  pager         = delta
+  excludesfile  = ~/.gitignore_global
+  autocrlf      = input      # normalize CRLF -> LF on commit; leave LF alone
+  whitespace    = fix         # fix trailing whitespace and blank lines at EOF
+
+[init]
+  defaultBranch = main
+
+[push]
+  default            = current    # push current branch to same-name remote branch
+  autoSetupRemote    = true       # auto --set-upstream on first push
+
+[pull]
+  rebase = true                   # rebase instead of merge on pull
+
+[rebase]
+  autoStash = true                # stash dirty working tree before rebase, pop after
+
+[merge]
+  conflictstyle = zdiff3          # show base in conflict markers (clearer than diff3)
+
+[diff]
+  algorithm      = histogram      # smarter diff than myers; better for code
+  colorMoved     = default        # highlight moved blocks differently from changes
+
+[delta]
+  # git-delta pager configuration (brew install git-delta)
+  navigate       = true           # n/N to jump between diff sections
+  side-by-side   = true
+  line-numbers   = true
+  syntax-theme   = Dracula
+
+[interactive]
+  diffFilter = delta --color-only  # use delta in interactive mode (git add -p)
+
+[fetch]
+  prune     = true                # delete local refs to deleted remote branches
+  pruneTags = true
+
+[rerere]
+  enabled = true                  # remember conflict resolutions across rebases
+
+[help]
+  autocorrect = prompt            # suggest corrections but ask before running
+
+[alias]
+  # Inspection
+  lg    = log --oneline --graph --decorate --all
+  who   = shortlog -sn --no-merges
+  last  = log -1 HEAD --stat
+
+  # Convenience
+  undo  = reset HEAD~1 --mixed   # undo last commit, keep changes staged
+  wip   = commit -am "wip"       # quick save (rebase -i to clean up later)
+  aliases = config --get-regexp alias
+
+  # Branch hygiene
+  gone  = "!git fetch -p && git branch -vv | grep ': gone]' | awk '{print $1}' | xargs -r git branch -d"
+
+[url "git@github.com:"]
+  insteadOf = https://github.com/  # always use SSH for GitHub
+
+[credential]
+  helper = osxkeychain

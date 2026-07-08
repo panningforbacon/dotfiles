@@ -1,0 +1,57 @@
+## ~/.config/mise/config.toml — GLOBAL mise config (applies everywhere).
+## 
+## Full reference: https://mise.jdx.dev/configuration.html
+##
+## ---------------------------------------------------------------------------
+## Precedence, lowest to highest:
+##   this global file  <  a project's ./mise.toml  <  ./.mise.local.toml
+## So per-project files override what's here. Keep this file for tools you
+## want on EVERY machine/shell; pin per-project versions in the repo instead.
+## ---------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+## [tools] — runtimes mise installs & activates.
+## Version specifiers: "latest", "22" (major), "22.3.1" (exact), "lts".
+## ------------------------------------------------------------------------
+
+[tools]
+node = "lts"
+
+# python = "3.12"       # mise installs the interpreter; uv handles packaging
+# rust   = "stable"
+# go     = "latest"
+# "npm:pnpm" = "latest" # mise can also manage some global CLIs via backends
+
+## ------------------------------------------------------------------------
+## [settings] — mise behavior.
+## ------------------------------------------------------------------------
+[settings]
+
+python.uv_venv_auto = true     # auto-create a venv for each project, and activate it when in that tree
+##  ^ the clean handshake between mise & uv; mise is the interpreter, and uv owns packaging; no turf war.
+
+# experimental = true          # required for some newer backends/features
+# idiomatic_version_file_enable_tools = ["node", "python"]
+##   ^ opt-in to reading legacy files like .nvmrc / .python-version.
+##     Off by default in modern mise to avoid surprise activations.
+# jobs = 4                     # parallel install jobs
+# verbose = false
+
+## ------------------------------------------------------------------------
+## [env] — environment variables applied when mise is active (dir-scoped).
+## Great replacement for ad-hoc `export`s and for project .env loading.
+## ------------------------------------------------------------------------
+# [env]
+# NODE_ENV = "development"
+# _.file = ".env"              # load KEY=VAL pairs from a .env file
+# _.path = ["./bin"]           # prepend ./bin to PATH when in this tree
+
+## ------------------------------------------------------------------------
+## [tasks] — mise doubles as a task runner (like make/just). Run: `mise run x`
+## ------------------------------------------------------------------------
+# [tasks.test]
+# run = "uv run pytest"
+#
+# [tasks.dev]
+# run = "npm run dev"
+# description = "start the dev server"
