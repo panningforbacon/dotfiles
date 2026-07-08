@@ -60,9 +60,53 @@ set_int()    { _set_default "$1" "$2" "-int"    "$3"; }
 set_float()  { _set_default "$1" "$2" "-float"  "$3"; }
 
 
+require_full_disk_access() {
+  # Guard clause: blocks until Terminal has Full Disk Access, or bails out.
+  # Can't script the grant itself — TCC's whole point is that a human has
+  # to click it. This just makes sure nothing downstream runs against a
+  # write that silently landed in the wrong (unsandboxed) plist.
+
+  # Cheap probe: TCC.db itself is FDA-gated, so being able to read it
+  # proves we have the access we need. No FDA -> permission denied here.
+  if sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" \
+    "select * from access limit 1" &>/dev/null; then
+    return 0   # already granted, nothing to do
+  fi
+
+  info "Full Disk Access is required before some defaults can be written."
+
+  echo "Opening System Settings..."
+  open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+  echo ""
+  echo "Add this terminal app (or VS Code/iTerm2/whatever) to the list and enable it, then confirm below."
+  echo "(If it's already listed, toggle it off and back on — stale grants happen.)"
+  echo ""
+
+  local confirm
+  while true; do
+      read -rp "Granted? [y/n] " confirm
+      case "$confirm" in
+          [Yy]*) break ;;
+          [Nn]*) echo "Waiting. Toggle it, then say y." ;;
+          *) echo "y or n." ;;
+      esac
+  done
+
+  # Re-probe — don't just trust the click, verify it actually took
+  if ! sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" \
+      "select * from access limit 1" &>/dev/null; then
+      echo "Still can't read TCC.db. Either the grant didn't take, or this"
+      echo "terminal process needs a restart before TCC will honor it."
+      return 1
+  fi
+
+  return 0
+}
+
+
 # ── Main ────────────────────────────────────────────────────────────────────
 
-section "defaults"
+section "macOS defaults"
 require_macos
 
 MACOS_VERSION="$(get_macos_version)"
@@ -82,7 +126,7 @@ osascript -e 'tell application "System Settings" to quit'    2>/dev/null || true
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Dock...\n"
+printf "\nDock...\n"
 
 # Icon size in pixels
 set_int "com.apple.dock" "tilesize" "48"
@@ -108,7 +152,7 @@ set_bool "com.apple.dock" "mru-spaces" "false"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Finder...\n"
+printf "\nFinder...\n"
 
 # Show all filename extensions
 set_bool "com.apple.finder" "AppleShowAllExtensions" "true"
@@ -148,7 +192,7 @@ set_str "com.apple.finder" "NewWindowTarget" "PfHm"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Menu bar and system UI...\n"
+printf "\nMenu bar and system UI...\n"
 
 # Show battery percentage
 set_bool "com.apple.menuextra.battery" "ShowPercent" "true"
@@ -162,7 +206,7 @@ set_bool "com.apple.menuextra.clock" "Show24Hour" "true"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Keyboard...\n"
+printf "\nKeyboard...\n"
 
 # Key repeat rate (lower = faster; default 6, minimum 1)
 set_int "NSGlobalDomain" "KeyRepeat" "2"
@@ -191,7 +235,7 @@ set_int "NSGlobalDomain" "AppleKeyboardUIMode" "3"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Trackpad...\n"
+printf "\nTrackpad...\n"
 
 # Enable tap to click (no physical press required)
 set_bool "com.apple.driver.AppleBluetoothMultitouch.trackpad" "Clicking" "true"
@@ -208,7 +252,7 @@ set_bool "com.apple.AppleMultitouchTrackpad" "TrackpadThreeFingerDrag" "true"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Screen...\n"
+printf "\nScreen...\n"
 
 # Require password immediately after sleep or screen saver
 set_int "com.apple.screensaver" "askForPassword" "1"
@@ -231,7 +275,7 @@ set_int "NSGlobalDomain" "AppleFontSmoothing" "1"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Mission Control and Spaces...\n"
+printf "\nMission Control and Spaces...\n"
 
 # Faster Mission Control animation
 set_float "com.apple.dock" "expose-animation-duration" "0.1"
@@ -245,7 +289,7 @@ set_bool "com.apple.dock" "mru-spaces" "false"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for TextEdit...\n"
+printf "\nTextEdit...\n"
 
 # Default to plain text, not rich text
 set_int "com.apple.TextEdit" "RichText" "0"
@@ -257,19 +301,25 @@ set_int "com.apple.TextEdit" "PlainTextEncodingForWrite" "4"
 
 # ────────────────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Activity Monitor...\n"
+printf "\nActivity Monitor...\n"
 
 # Show all processes, not just the current user's
 set_int "com.apple.ActivityMonitor" "ShowCategory" "0"
 
 # Sort by CPU usage by default
 set_str "com.apple.ActivityMonitor" "SortColumn" "CPUUsage"
-set_int    "com.apple.ActivityMonitor" "SortDirection" "0"
+set_int "com.apple.ActivityMonitor" "SortDirection" "0"
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# ── App-specific defaults ────────────────────────────────────────────────────────────────────
 
-printf "\nSetting defaults for Safari (developer settings)...\n"
+section "App-specific defaults"
+
+# Guard-clause
+require_full_disk_access || { die "Aborting: no FDA, writes would be silently discarded."; }
+
+
+printf "\nSafari (developer settings)...\n"
 
 # Enable the Develop menu
 set_bool "com.apple.Safari" "IncludeDevelopMenu" "true"
