@@ -1,31 +1,44 @@
 # Working agreements
 
-| | |
+|  |  |
 | --- | --- |
 | **Status** | Charter v1.0 — **accepted** by PO, 2026-09-29 |
 | **Roles from sprint 1 on** | **Tech lead and repo owner:** the stakeholder. Reviews, commits, pushes, merges. **Developer:** Claude. Writes and explains code in a chat session that sees only the Project files. **PO:** the stakeholder, for scope and priority. |
 
 ## 1. Per-story Definition of Done
 
-A story is done when all of the following hold. Spikes and chores use the items marked with *.
+A story is done when all of the following hold. Spikes and chores use the items marked with \*.
 
-- [ ] Every acceptance criterion in the issue is checked off.*
-- [ ] `scripts/check` passes: `zsh -n` on every script and the full fixture test suite (CR-7).*
+- [ ] Every acceptance criterion in the issue is checked off.\*
+- [ ] `scripts/check` passes: `zsh -n` on every script and the full fixture test suite (CR-7).\*
 - [ ] New parsers of system-command output have fixture tests (ADR-0004).
 - [ ] The live sequence on the Mac passed (ADR-0004):
   1. `bin/provision --check` changes nothing and reports the expected `DIFF` lines;
   2. `bin/provision` converges;
   3. a second `bin/provision` makes no changes other than upstream releases (M3).
 - [ ] Every new output line goes through `log` and follows §8.5 as amended by CR-18 (FR-15.4), or falls under the Homebrew exception (CR-10).
-- [ ] No secrets or personal identifiers in code, fixtures or commit messages (NFR-3).*
-- [ ] Docs updated where behavior or a decision changed: README, `docs/architecture.md`, or an ADR (a new ADR if a decision was reversed).*
-- [ ] Merged to `main` through a pull request that closes the issue; `main` is runnable afterwards.*
+- [ ] No secrets or personal identifiers in code, fixtures or commit messages (NFR-3).\*
+- [ ] Docs updated where behavior or a decision changed: README, `docs/architecture.md`, or an ADR (a new ADR if a decision was reversed).\*
+- [ ] Merged to `main` through a pull request that closes the issue; `main` is runnable afterwards.\*
 
 ## 2. Branching
 
 - **`main` is always runnable.** Nothing is committed to it directly.
 - One short-lived branch per issue, named `<issue-number>-<short-slug>`, e.g. `7-logging-library`.
 - Merge with **squash**, so each issue lands on `main` as one commit, and delete the branch afterwards.
+- Consequence of squash merges: git never sees a feature branch as merged. Delete local branches with `git branch -D`, only after the PR page shows **Merged** (§4, step 8). Never keep working on a branch after it has been squash-merged; start a new branch from `main`.
+
+### One-time repository settings
+
+On GitHub, **Settings → General → Pull Requests**:
+
+- Untick **Allow merge commits** and **Allow rebase merging**, so squash is the only merge button.
+- Under **Allow squash merging**, set **Default commit message** to **Pull request title and description**. The squash commit on `main` then carries the PR title as its subject and `Closes #n` in its body.
+- Tick **Automatically delete head branches**, so GitHub deletes the remote branch on merge.
+
+These settings enforce the rules above; the rules still say what to do if the settings are ever lost.
+
+Optionally, run `git config --global fetch.prune true` once, so every `fetch` and `pull` removes references to branches deleted on GitHub.
 
 ## 3. Commit messages
 
@@ -43,6 +56,8 @@ Refs #7
 - **Scope:** the module or library, e.g. `log`, `converge`, `preflight`, `bootstrap`.
 - **Example:** `feat(log): add compact settings line with dot-padding`
 
+Branch commits follow this format too, but only the **pull request title** survives on `main`: squash merging replaces your commits with one commit titled after the PR (§4, step 5).
+
 ## 4. Working an issue, start to close (by hand)
 
 No automation: every step below is done in the GitHub web page or with plain `git` (DEC-32). The walkthrough for *creating* issues is in `docs/backlog/sprint-01.md`.
@@ -55,10 +70,10 @@ No automation: every step below is done in the GitHub web page or with plain `gi
 | 2 | Terminal | **Branch.** `git switch -c 7-logging-library` from an up-to-date `main`. | Nothing yet |
 | 3 | Terminal | **Commit.** Each commit message ends with `Refs #7` (§3). | After pushing: each commit appears on issue #7's timeline |
 | 4 | Terminal | **Push.** `git push -u origin 7-logging-library` | A yellow "Compare & pull request" banner on the repo page |
-| 5 | Repo page | **Open a pull request.** Click the banner. Title: the issue's title. Description: what changed, how you tested it, and a final line `Closes #7`. | The PR appears in the issue's side panel under **Development** |
+| 5 | Repo page | **Open a pull request.** Click the banner. **Title in commit format (§3)**, because it becomes the commit subject on `main`, e.g. `feat(log): add table-driven logging library`. Description: what changed, how you tested it, and a final line `Closes #7`. | The PR appears in the issue's side panel under **Development** |
 | 6 | PR page | **Review.** Read the diff in the **Files changed** tab against §5's checklist. Tick the issue's acceptance-criteria checkboxes as you confirm each one. | Checkbox progress on the issue (for example "4 of 6") |
-| 7 | PR page | **Merge.** Choose **Squash and merge**, then **Delete branch**. | The PR shows as merged; **issue #7 closes automatically**; the milestone's progress bar moves |
-| 8 | Terminal | **Tidy up.** `git switch main && git pull && git branch -d 7-logging-library` | — |
+| 7 | PR page | **Merge.** Click **Squash and merge**, check that the proposed commit subject matches §3, then confirm. | The PR shows as merged; the remote branch is deleted; **issue #7 closes automatically**; the milestone's progress bar moves |
+| 8 | Terminal | **Tidy up**, only after the PR page shows **Merged**: `git switch main && git pull --prune && git branch -D 7-logging-library`. `-D` is required: a squash merge rewrites your commits into one new commit, so git cannot tell the branch was merged, and `-d` refuses or passes by accident. `--prune` removes the stale `origin/…` reference to the branch GitHub already deleted. | — |
 
 **Linking vs. closing**
 
@@ -111,5 +126,6 @@ If a development chat discovers that a requirement is wrong or impossible, it st
 | Version | Date | Change |
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | First draft. |
-| 1.0 | 2026-09-28 | No content changes; version aligned with the charter. |
 | 0.2 | 2026-09-28 | §4 rewritten as a manual issue lifecycle (DEC-32); `gh` automation removed. |
+| 1.0 | 2026-09-29 | No content changes; version aligned with the charter. |
+| 1.1 | 2026-09-30 | Squash-merge consequences: branch cleanup uses `pull --prune` and `branch -D` after checking the PR is merged; one-time repo settings (squash only, auto-delete branches, squash message from PR title and description); PR titles use commit format. |
