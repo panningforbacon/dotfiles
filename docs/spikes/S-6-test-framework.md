@@ -143,8 +143,17 @@ End
 
 ## Result on the Mac
 
-<!-- Replace this line with the output of the run: macOS version, shellspec --version, and the summary line. -->
-Pending.
+== macOS 26.6.2, 5.9, shellspec 0.28.1
+== 1. expected: 6 examples, 0 failures, exit 0
+Running: /bin/zsh -f [zsh 5.9]
+......
+
+Finished in 0.07 seconds (user 0.04 seconds, sys 0.03 seconds)
+6 examples, 0 failures
+
+exit=0
+== 2. expected: 1 failure (isolation), exit 101: proves -f matters
+exit=101
 
 ## Risks
 
