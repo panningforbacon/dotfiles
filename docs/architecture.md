@@ -221,7 +221,7 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | 0001 | Repository name and layout | Accepted |
 | 0002 | Implementation language: zsh | Accepted (PO override) |
 | 0003 | Bootstrap loader and entry point | Accepted |
-| 0004 | Test environment and strategy | Accepted; framework pending S-6 |
+| 0004 | Test environment and strategy | Accepted; framework: ShellSpec (S-6) |
 | 0005 | Homebrew integration via Brewfile | Accepted (PO override) |
 | 0006 | macOS settings manifest format | Accepted (PO override) |
 | 0007 | Dotfile linking mechanism | Accepted |
