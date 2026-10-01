@@ -109,7 +109,7 @@ No automation: every step below is done in the GitHub web page or with plain `gi
 | Change | Owner | How |
 | --- | --- | --- |
 | **What** we build (a PRD requirement) | PO | Add a CR to the change-request file with section, proposed text and reason. The PO approves or rejects it. Approved CRs are merged into the PRD in one commit that bumps its version and adds a changelog row. |
-| **How** we build it (a technical decision) | Tech lead | Write a new ADR. A reversed decision gets a new ADR that supersedes the old one; the old ADR's status becomes "Superseded by ADR-NNNN". ADRs are never rewritten after acceptance. |
+| **How** we build it (a technical decision) | Tech lead | Write a new ADR. A reversed decision gets a new ADR that supersedes the old one; the old ADR's status becomes "Superseded by ADR-NNNN". ADRs are never rewritten after acceptance, except to record a decision the ADR itself marked pending, with a changelog row. |
 | **Order** of work | PO | Edit `docs/release-plan.md` and move issues between milestones. |
 | **A story's details** | Tech lead | Edit the issue on GitHub. Acceptance criteria must still trace to FR IDs. |
 
@@ -129,3 +129,4 @@ If a development chat discovers that a requirement is wrong or impossible, it st
 | 0.2 | 2026-09-28 | §4 rewritten as a manual issue lifecycle (DEC-32); `gh` automation removed. |
 | 1.0 | 2026-09-29 | No content changes; version aligned with the charter. |
 | 1.1 | 2026-09-30 | Squash-merge consequences: branch cleanup uses `pull --prune` and `branch -D` after checking the PR is merged; one-time repo settings (squash only, auto-delete branches, squash message from PR title and description); PR titles use commit format. |
+| 1.2 | 2026-09-30 | §6: an accepted ADR may be edited to record a decision it marked pending, with a changelog row (spike S-6). |
