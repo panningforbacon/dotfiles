@@ -175,7 +175,7 @@ Three documented exceptions keep the same contract but change the output:
 
 ```zsh
 log_start <module> <item-count>        # ▶ header; sets the current module
-log <STATUS> <subject> <message>       # every other line
++og <STATUS> <subject> <message>       # every other line; an empty subject prints the message alone
 log_finish                             # ■ header with this module's counts
 ```
 
@@ -191,9 +191,11 @@ log_finish                             # ■ header with this module's counts
   | `ACTION` | stdout | bold magenta | — |
   | `NOTE` | stdout | none | — |
 
-- **Line anatomy:** `HH:MM:SS  STATUS   [module]  subject: message`. The time comes from zsh's `strftime` (the `zsh/datetime` module), so no `date` process is spawned per line.
-- **Color** (FR-15.7): enabled per stream only if that stream is a terminal and `NO_COLOR` is unset or empty. When color is off, the `brew` module also exports `HOMEBREW_NO_COLOR=1` (DEC-28).
-- **Counters:** module finish lines and the run summary read the same array, so they cannot disagree.
+- **Line anatomy:** `HH:MM:SS  STATUS   [module]  subject: message`. STATUS is padded to 7 columns and `[module]` to 16, each followed by two spaces; a longer module name is never truncated. The time comes from zsh's `strftime` (the `zsh/datetime` module), so no `date` process is spawned per line.
+- **Current module:** `LOG_MODULE`, default `provision`. `log_start` sets it; lines outside any module, such as the run summary, set it directly.
+- **Misuse:** an unknown status or a wrong argument count prints one `FAIL`, counts as failed, and returns 1.
+- **Color** (FR-15.7): enabled per stream only if that stream is a terminal and `NO_COLOR` is unset or empty. Color covers the whole line; headers are bold. When color is off, the `brew` module also exports `HOMEBREW_NO_COLOR=1` (DEC-28).
+- **Counters:** `LOG_COUNTS`, keyed `module:counter` (`ok`, `changed`, `would_change`, `failed`); `log_start` zeroes the module's counters. Module finish lines and the run summary read the same array, so they cannot disagree.
 - **Secrets:** no secret is ever passed to `log`. Passphrase prompts use non-echoing input (FR-15.8).
 - **No log files** (FR-15.2). Users who want a record can pipe through `tee`.
 
