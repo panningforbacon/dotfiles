@@ -137,14 +137,18 @@ Any stage returning 1 or 2 ends the run. The summary still prints (FR-15.3).
 Every managed item goes through one helper:
 
 ```zsh
-converge <subject> <check_fn> <apply_fn> <verify_fn> [args...]
+converge <subject> <desired> <remedy> <check_fn> <apply_fn> <verify_fn> [args...]
 ```
+
+`desired` is the state the read-back must find, for example `present`. `remedy` is what the user should do after a `FAIL`, for example `move the file aside, then re-run`. Both appear only in `FAIL` lines.
 
 | Function | Returns | Prints to stdout |
 | --- | --- | --- |
 | `check_fn args` | 0 = already in the desired state | the observed state, e.g. `missing` or `present` |
 | `apply_fn args` | 0 = the command succeeded | the past-tense result, e.g. `created` |
 | `verify_fn args` | 0 = read-back confirms the desired state | the state found, e.g. `present` |
+
+Each function runs in a subshell, receives `args`, and has its stdout and stderr captured and joined into one line, so nothing reaches the terminal except through `log`. A function therefore cannot pass state to the next one except through `args`. An apply that fails without printing anything is reported as `<apply_fn> exited <n>`.
 
 Each item produces **exactly one line** (CR-18):
 
@@ -162,6 +166,9 @@ Rules (FR-14):
 - A module only ever converges items it declares. Nothing undeclared is removed or reset (FR-14.2).
 - Every apply is safe to repeat, so interrupting and re-running converges (FR-14.3).
 - `CHANGED` is only printed after the read-back confirms the effect. A command that succeeded but had no effect is a `FAIL` (FR-10.2, M4).
+- `converge` returns 0 for `OK`, `DIFF` and `CHANGED`, and 1 for `FAIL`. Whether to continue with the next item is the module's decision.
+- Check mode is on when `CHECK_MODE` is set to anything other than empty or `0`, so a mistyped value errs toward changing nothing.
+- A wrong argument count or a name that is not a defined function is itself a `FAIL`, checked before anything runs, including in check mode.
 
 Three documented exceptions keep the same contract but change the output:
 
@@ -175,7 +182,7 @@ Three documented exceptions keep the same contract but change the output:
 
 ```zsh
 log_start <module> <item-count>        # ▶ header; sets the current module
-+og <STATUS> <subject> <message>       # every other line; an empty subject prints the message alone
+log <STATUS> <subject> <message>       # every other line; an empty subject prints the message alone
 log_finish                             # ■ header with this module's counts
 ```
 
