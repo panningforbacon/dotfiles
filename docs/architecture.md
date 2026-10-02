@@ -100,8 +100,8 @@ Arguments after the command are passed through, for example `… bootstrap.zsh)"
 | Code | Meaning |
 | --- | --- |
 | 0 | Run completed; no `FAIL` |
-| 1 | At least one `FAIL` (FR-15.1) |
-| 2 | Bail-out: the user must act, then re-run (FR-2) |
+| 1 | At least one `FAIL` (FR-15.1), unless the run ended with code 2 |
+| 2 | A stage ended the run with a preflight refusal or a bail-out (FR-2). Takes precedence over 1: a refusal prints `FAIL` lines and still exits 2 |
 | 64 | Usage error |
 
 ## 4. Run stages
@@ -185,6 +185,8 @@ Three documented exceptions keep the same contract but change the output:
 - **Homebrew** (CR-10, ADR-0005): the whole Brewfile is one item. Check is `brew bundle check`; apply is `brew bundle`, whose output passes through unmodified; verify is `brew bundle check` again. Because Homebrew upgrades by default (CR-11), check fails whenever anything is outdated.
 - **macOS settings** (§8.5 compact form, ADR-0006): one dot-padded line per intent, with current and desired values. The `defaults` module formats that message; the status is still `OK`, `CHANGED`, `DIFF` or `FAIL`.
 - **Manual stops**: `lib/prompt.zsh` offers `wait_for_user <message>` (print `ACTION`, wait for Enter) and `bail <message>` (print `ACTION`, return 2). In `--check` mode, stops are reported as `DIFF` and never wait.
+
+**Preflight refusals** (FR-2.1, FR-2.2) are outside this contract: they are not managed items, because there is nothing to apply, and not manual stops, because the run cannot continue. The `preflight` module calls `log` directly: `OK` or `WARN` when a check passes, `FAIL` plus return 2 when it refuses, in `--check` mode too. A refusal never becomes `ACTION` or `DIFF`.
 
 ## 7. Logging implementation
 
@@ -300,3 +302,4 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | 0.2 | 2026-09-28 | Applied CR-12 to CR-18 and DEC-29 to DEC-33: fewer stages, one-line-per-item converge, table-driven logging, clone-based bootstrap. |
 | 1.0 | 2026-09-29 | Resolved the last open items: DEC-34 to DEC-36; ADR-0007 accepted. Charter accepted by PO. |
 | 1.1 | 2026-10-01 | §4: summary lines, modules loaded before the first stage, runner `FAIL`s. §7: usage-text exception (sprint 1, issue 5). |
+| 1.2 | 2026-10-02 | §3: exit code 2 covers preflight refusals and takes precedence over 1. §6: preflight refusals are `FAIL` lines, never `ACTION` or `DIFF` (sprint 1, preflight story). |
