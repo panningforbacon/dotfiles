@@ -23,7 +23,7 @@ The v1.3 DoD required every script to pass ShellCheck. ShellCheck supports sh, b
 All code targets **`/bin/zsh` 5.9**.
 
 - **Startup-file isolation (DEC-18).** Every script's shebang is `#!/bin/zsh -f`. `-f` stops zsh from reading the user's startup files (a non-interactive zsh still reads `~/.zshenv`), so the dotfiles this project manages cannot change the provisioner's behavior. Every function starts with `emulate -L zsh`, which resets options to zsh defaults for that function only.
-- **Strict mode (DEC-19).** Scripts enable options that fail fast on errors and unset variables. Candidates: `ERR_EXIT`, `NO_UNSET`, `PIPE_FAIL`. The first story that writes a script confirms the exact set against the zsh 5.9 manual and records it here.
+- **Strict mode (DEC-19).** `NO_UNSET` and `PIPE_FAIL`, confirmed against the zsh 5.9 manual and by experiment (sprint 1, issue 5). `emulate -L zsh` resets every option, including these two, so each function starts with `emulate -L zsh; setopt NO_UNSET PIPE_FAIL`, and each script sets the same pair at top level. `ERR_EXIT` and `ERR_RETURN` are rejected: failures are return codes read by the caller, and the code that detects a failure logs the `FAIL` line (architecture §5, §6). `ERR_EXIT` would end the run with no `FAIL` line and no summary (FR-15.1, FR-15.3), it exits on `(( n++ ))` from 0, and zsh suspends it inside any function called in a conditional. A zsh error that cannot be read as a status, such as an unset parameter, is caught by an `always` block in `bin/provision`, which logs a `FAIL` and still prints the summary.
 - **Quality gate (CR-7).** ShellCheck is removed from the DoD. Replacement: every script passes `zsh -n`, and the fixture test suite passes.
 
 ## Rejected alternatives
@@ -45,3 +45,4 @@ All code targets **`/bin/zsh` 5.9**.
 | Version | Date | Change |
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | Accepted during chartering (PO override). |
+| 0.2 | 2026-10-01 | Recorded the pending strict-mode set: `NO_UNSET`, `PIPE_FAIL`, set per function; `ERR_EXIT` rejected (issue 5). Filling a decision this ADR marked pending, per working agreements §6. |

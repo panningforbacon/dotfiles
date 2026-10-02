@@ -122,6 +122,16 @@ Arguments after the command are passed through, for example `… bootstrap.zsh)"
 
 Any stage returning 1 or 2 ends the run. The summary still prints (FR-15.3).
 
+The summary is logged under the module name `summary`:
+
+```
+HH:MM:SS  NOTE     [summary]         run: <c> changed · <o> ok · <f> failed
+HH:MM:SS  NOTE     [summary]         check: <w> would change · <o> ok · <f> failed
+HH:MM:SS  NOTE     [summary]         stopped at <stage> — fix what it reported, then re-run
+```
+
+The first line is replaced by the second in `--check` mode (FR-16.1). The third appears only when a stage ended the run. Every module is loaded before the first stage runs, so a missing or broken module fails before any change. A stage that returns 1 without a `FAIL` line, or returns anything other than 0, 1 or 2, gets a `FAIL` from `bin/provision`, so exit code 1 always has a line naming its source.
+
 **Expected manual stops on a fresh run:** Command Line Tools installer (1), admin password (1), per-machine inputs (1), GitHub login (1), SSH passphrase (1). Five, against a budget of 12 (M2).
 
 ## 5. Module boundaries
@@ -204,6 +214,7 @@ log_finish                             # ■ header with this module's counts
 - **Color** (FR-15.7): enabled per stream only if that stream is a terminal and `NO_COLOR` is unset or empty. Color covers the whole line; headers are bold. When color is off, the `brew` module also exports `HOMEBREW_NO_COLOR=1` (DEC-28).
 - **Counters:** `LOG_COUNTS`, keyed `module:counter` (`ok`, `changed`, `would_change`, `failed`); `log_start` zeroes the module's counters. Module finish lines and the run summary read the same array, so they cannot disagree.
 - **Secrets:** no secret is ever passed to `log`. Passphrase prompts use non-echoing input (FR-15.8).
+- **Usage text** is the one exception: `bin/provision` prints it directly, to stdout for `--help` and to stderr after the `FAIL` line for a usage error. It is help, not run output.
 - **No log files** (FR-15.2). Users who want a record can pipe through `tee`.
 
 ## 8. Configuration and state
@@ -288,3 +299,4 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | 0.1 | 2026-09-28 | First draft from charter rounds 1–5. |
 | 0.2 | 2026-09-28 | Applied CR-12 to CR-18 and DEC-29 to DEC-33: fewer stages, one-line-per-item converge, table-driven logging, clone-based bootstrap. |
 | 1.0 | 2026-09-29 | Resolved the last open items: DEC-34 to DEC-36; ADR-0007 accepted. Charter accepted by PO. |
+| 1.1 | 2026-10-01 | §4: summary lines, modules loaded before the first stage, runner `FAIL`s. §7: usage-text exception (sprint 1, issue 5). |
