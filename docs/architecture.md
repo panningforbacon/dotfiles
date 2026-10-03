@@ -49,8 +49,9 @@ dotfiles/
 ├── templates/
 │   └── git-identity.tmpl      # rendered with .env values into ~/.config/git/identity
 ├── tests/
+│   ├── *_spec.zsh             # ShellSpec specs, one per script or library (ADR-0004)
 │   ├── fixtures/              # captured command output
-│   └── …                      # framework chosen by spike S-6 (ADR-0004)
+│   └── vendor/shellspec/      # ShellSpec 0.28.1, vendored and pinned (ADR-0004, S-6)
 ├── scripts/
 │   └── check                  # DoD gate: zsh -n on every script + test suite (CR-7)
 ├── docs/
@@ -63,6 +64,7 @@ dotfiles/
 │   ├── backlog/
 │   └── spikes/                # one findings file per spike
 ├── .env.example               # documents every per-machine key (FR-3.1)
+├── .shellspec                 # ShellSpec options; forces /bin/zsh -f (ADR-0004)
 ├── .gitignore                 # includes .env
 ├── LICENSE
 └── README.md
@@ -219,7 +221,8 @@ log_finish                             # ■ header with this module's counts
 - **Color** (FR-15.7): enabled per stream only if that stream is a terminal and `NO_COLOR` is unset or empty. Color covers the whole line; headers are bold. When color is off, the `brew` module also exports `HOMEBREW_NO_COLOR=1` (DEC-28).
 - **Counters:** `LOG_COUNTS`, keyed `module:counter` (`ok`, `changed`, `would_change`, `failed`); `log_start` zeroes the module's counters. Module finish lines and the run summary read the same array, so they cannot disagree.
 - **Secrets:** no secret is ever passed to `log`. Passphrase prompts use non-echoing input (FR-15.8).
-- **Usage text** is the one exception: `bin/provision` prints it directly, to stdout for `--help` and to stderr after the `FAIL` line for a usage error. It is help, not run output.
+- **Usage text** is an exception: `bin/provision` prints it directly, to stdout for `--help` and to stderr after the `FAIL` line for a usage error. It is help, not run output.
+- **Test-runner output** is the other exception: `scripts/check` passes ShellSpec's report through unmodified, between its own `log` lines, because only that report can name a failing example. It is a developer tool's output, not run output.
 - **No log files** (FR-15.2). Users who want a record can pipe through `tee`.
 
 ## 8. Configuration and state
