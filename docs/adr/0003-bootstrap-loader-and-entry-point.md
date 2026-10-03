@@ -29,9 +29,10 @@ The command substitution downloads the script first, so stdin stays attached to 
 
 1. If `$DOTFILES_DIR/bin/provision` exists (`DOTFILES_DIR` defaults to `~/.dotfiles`), execute it with the given arguments, **as it stands**. Never pull (CR-6).
 2. Otherwise:
-   1. If `xcode-select -p` reports no developer directory, start the installer with `xcode-select --install`, print an `ACTION` line, and wait until `xcode-select -p` succeeds. This opens Apple's dialog: one manual stop. Spike S-2 confirms this is the right method on macOS 27, versus the headless method Homebrew's installer uses.
-   2. `git clone` the repository into `$DOTFILES_DIR`.
-   3. Execute the new checkout's `bin/provision` with the given arguments.
+   1. If the arguments include `--check`, print one `DIFF` line for the missing checkout and exit 0. Check mode makes no changes and has no manual stops (FR-16.1).
+   2. If `/Library/Developer/CommandLineTools/usr/bin/git` is not executable, start the installer with `xcode-select --install`, print an `ACTION` line, and wait until that file is executable. The `ACTION` line says how to recover from a dismissed dialog: press Ctrl-C and paste the command again. `/usr/bin/git` is never run as a test, because the stub opens the dialog itself. This opens Apple's dialog: one manual stop. Spike S-2 chose this method over the headless one Homebrew's installer uses, from source and documentation; it first runs for real at the release wipe.
+   3. `git clone` the repository into `$DOTFILES_DIR`. A directory that already holds other files is a `FAIL`; the loader never deletes it.
+   4. Execute the new checkout's `bin/provision` with the given arguments.
 
 The loader contains its own minimal copy of the §8.5 line format, because `lib/log.zsh` does not exist on disk until the clone succeeds.
 
@@ -57,3 +58,4 @@ The loader contains its own minimal copy of the §8.5 line format, because `lib/
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | Accepted during chartering (tarball path). |
 | 0.2 | 2026-09-28 | Replaced the tarball path with install-then-clone (CR-15). |
+| 0.3 | 2026-10-03 | Step 2: completion check and cancel recovery from spike S-2; check mode without a checkout reports `DIFF`; occupied directory is a `FAIL` (issue #8). |
