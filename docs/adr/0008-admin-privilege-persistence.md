@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Accepted — no-second-prompt behavior confirmed by spike S-2 |
+| **Status** | Accepted — holds until the first `brew` command; Homebrew resets the ticket (spike S-2) |
 | **Date** | 2026-09-28 |
 | **Deciders** | Tech lead |
 | **Related** | DEC-26; FR-2.3, FR-14.3, FR-15.8, M2 |
@@ -28,7 +28,10 @@ FR-2.3 requires one admin password prompt, with privileges lasting for the whole
 
 ## Consequences
 
-- Spike S-2 must confirm on macOS 27 that the Homebrew installer and casks see the live ticket and do not prompt. Tickets are tied to the terminal, and the loop runs on the same one.
+- Spike S-2 confirmed that the loop holds the ticket past expiry and that the Homebrew installer uses it without prompting. Observed on macOS 26.6.2 with Homebrew 7.0.2; not yet confirmed on macOS 27.
+- Homebrew resets the sudo ticket on every `brew` command except fast-path ones such as `shellenv`. The ticket does not survive the Homebrew install or any later `brew` command.
+- Every stage of the program that needs root runs before the first such `brew` command. A stage that runs after it prompts again.
+- A cask whose installer needs root prompts for the password again (CR-19).
 - A crash that bypasses the exit trap leaves the loop running until its parent check notices, within about 60 seconds.
 - The password is never read or stored by our code; `sudo` handles it (FR-15.8).
 
@@ -37,3 +40,4 @@ FR-2.3 requires one admin password prompt, with privileges lasting for the whole
 | Version | Date | Change |
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | Accepted during chartering. |
+| 0.2 | 2026-10-03 | Recorded spike S-2: the ticket does not survive `brew`; root stages run first. |
