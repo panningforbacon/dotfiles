@@ -1,0 +1,104 @@
+#!/bin/zsh -f
+# scripts/check: the DoD quality gate (CR-7, ADR-0004 layers 1 and 2,
+# docs/working-agreements.md §1). Two steps, both always run:
+#
+#   1. syntax   /bin/zsh -f -n on every script
+#   2. tests    the whole fixture suite, with the vendored ShellSpec
+#
+# Exit 0 when both pass, 1 otherwise.
+#
+# ShellSpec's own report is passed through unmodified: it is the only thing
+# that can name a failing example (docs/architecture.md §7).
+
+# idiom: %x prompt escape. ${(%):-%x} is the path of the file being read, even
+# when ShellSpec sources this file from inside a function, where $0 is not.
+# :A makes it absolute and resolves symlinks; each :h drops one path component.
+typeset -g CHECK_ROOT=${${(%):-%x}:A:h:h}
+
+source $CHECK_ROOT/lib/log.zsh
+
+# check_syntax_files <root>: the files the syntax step covers, in $reply.
+check_syntax_files() {
+  emulate -L zsh
+  local root=$1
+  # idiom: glob qualifiers. (N) = match nothing instead of erroring when a
+  # directory is missing or empty, (.) = regular files only, (D) = also match
+  # dot-names. Without D a glob skips dotfiles, which is what keeps .gitkeep
+  # out of the four script directories; home/ needs D because the dotfiles
+  # there are the point.
+  reply=(
+    $root/bootstrap.zsh(N.)
+    $root/{bin,lib,modules,scripts}/**/*(N.)
+    # Only zsh's startup files and *.zsh: home/ also holds .zsh_plugins.txt,
+    # TOML and Lua, which are not zsh.
+    $root/home/**/.(zshenv|zprofile|zshrc|zlogin|zlogout)(ND.)
+    $root/home/**/*.zsh(ND.)
+  )
+}
+
+# check_syntax <root>: one line per file. Returns 1 if any file fails.
+check_syntax() {
+  emulate -L zsh
+  local root=$1 file error failed=0
+  check_syntax_files $root
+  if (( $#reply == 0 )); then
+    # A gate that checked nothing must not pass: this is a wrong root.
+    log FAIL "$root" "found no scripts to check — run scripts/check from a checkout of the repository"
+    return 1
+  fi
+  for file in ${reply#$root/}; do
+    # cd in a subshell so zsh reports the path relative to the repo root.
+    # -f for the same reason every script has it: no startup file may change
+    # the result (ADR-0002).
+    if error=$(cd $root && /bin/zsh -f -n $file 2>&1); then
+      log OK $file 'zsh -n passed'
+    else
+      # ${error%%$'\n'*} keeps the first line: longest-suffix removal from the
+      # first newline on.
+      log FAIL $file "zsh -n failed (${error%%$'\n'*}) — fix the syntax error, then run scripts/check again"
+      failed=1
+    fi
+  done
+  return $failed
+}
+
+# check_tests <root>: runs the suite; ShellSpec's exit code is the verdict (S-6).
+check_tests() {
+  emulate -L zsh
+  local root=$1 runner=tests/vendor/shellspec/shellspec rc
+  if [[ ! -f $root/$runner ]]; then
+    log FAIL 'test suite' "$runner is missing — restore it with git checkout -- tests/vendor, then run scripts/check again"
+    return 1
+  fi
+  # /bin/sh explicitly: the gate then works even if the runner lost its
+  # executable bit. ShellSpec finds .shellspec by walking up from the
+  # working directory, hence the cd.
+  (cd $root && /bin/sh $runner)
+  rc=$?
+  if (( rc == 0 )); then
+    log OK 'test suite' 'ShellSpec passed'
+  else
+    log FAIL 'test suite' "ShellSpec exited $rc; its report above names the failures — fix them, then run scripts/check again"
+  fi
+  return $rc
+}
+
+check_main() {
+  emulate -L zsh
+  local root=$1 syntax_rc tests_rc
+  check_syntax_files $root
+  log_start check $(( $#reply + 1 ))    # every file, plus the suite
+  check_syntax $root; syntax_rc=$?
+  # Not short-circuited: one run reports everything that is wrong.
+  check_tests $root;  tests_rc=$?
+  log_finish
+  (( syntax_rc == 0 && tests_rc == 0 ))
+}
+
+# idiom: ShellSpec's sourced guard. Include sets __SOURCED__, so the spec gets
+# the functions above without running the gate (which would run the suite
+# from inside the suite).
+${__SOURCED__:+return}
+
+check_main $CHECK_ROOT
+exit $?
