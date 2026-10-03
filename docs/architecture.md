@@ -80,9 +80,12 @@ dotfiles/
 
 1. If `$DOTFILES_DIR` (default `~/.dotfiles`) contains `bin/provision`, run it as it stands. Never pull (CR-6).
 2. Otherwise:
-   1. if the Xcode Command Line Tools are missing, start Apple's installer and wait until they are installed (one manual stop, CR-15);
-   2. `git clone` the repo into `$DOTFILES_DIR`;
-   3. run `bin/provision` from the new checkout.
+   1. with `--check`, report the missing checkout as one `DIFF` line and exit 0, changing nothing (FR-16.1);
+   2. if the Xcode Command Line Tools are missing, start Apple's installer and wait until their `git` is installed (one manual stop, CR-15);
+   3. `git clone` the repo into `$DOTFILES_DIR`; a directory that already holds other files is a `FAIL`, never deleted;
+   4. run `bin/provision` from the new checkout.
+
+The loader's own failures print one `FAIL` line and exit 1.
 
 Arguments after the command are passed through, for example `… bootstrap.zsh)" bootstrap --check`.
 
@@ -303,3 +306,4 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | 1.0 | 2026-09-29 | Resolved the last open items: DEC-34 to DEC-36; ADR-0007 accepted. Charter accepted by PO. |
 | 1.1 | 2026-10-01 | §4: summary lines, modules loaded before the first stage, runner `FAIL`s. §7: usage-text exception (sprint 1, issue 5). |
 | 1.2 | 2026-10-02 | §3: exit code 2 covers preflight refusals and takes precedence over 1. §6: preflight refusals are `FAIL` lines, never `ACTION` or `DIFF` (sprint 1, preflight story). |
+| 1.3 | 2026-10-03 | §3: loader steps updated for check mode without a checkout, the Command Line Tools completion check, and the occupied-directory `FAIL` (sprint 1, issue 8; ADR-0003 v0.3). |
