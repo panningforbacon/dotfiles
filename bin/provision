@@ -1,24 +1,50 @@
 #!/bin/zsh -f
-# bin/provision: the entry point for every run (docs/architecture.md §3, §4).
+# bin/provision: the entry point for every run.
 #
 #   bin/provision [--check] [--upgrade] [--help]
 #
-# Error handling (ADR-0002, DEC-19): no ERR_EXIT. Every failure is a return
-# code that the caller reads, and the code that detects a failure logs the
-# FAIL line naming it. An exit-on-error option would end the run with no
-# line and no summary (FR-15.1, FR-15.3).
+# idiom: -f on the #! line starts zsh without the user's startup files
+# (.zshrc and the rest), so interactive settings cannot change the run.
+#
+# Error handling: no ERR_EXIT. Every failure is a return code that the
+# caller reads, and the code that detects a failure logs the FAIL line
+# naming it. An exit-on-error option would end the run with no line and no
+# summary.
+#
+# at run: sets NO_UNSET and PIPE_FAIL, defines the globals, sources
+#   lib/log.zsh and lib/converge.zsh, defines the functions, then calls
+#   provision_main "$@" on the last line. Modules are sourced later, inside
+#   _provision_load_modules.
+# calls:
+#   provision_main
+#   ├── _provision_usage
+#   ├── _provision_load_modules
+#   ├── _provision_run_stages
+#   ├── _provision_summary
+#   └── _provision_total
+# outside: log, and mod_<stage>_run for each stage in PROVISION_STAGES.
+# contract: provision_main returns the script's exit code: 0 no failure,
+#   1 at least one FAIL, 2 a stage returned 2, 64 unknown option.
+# globals: defines DOTFILES_DIR, CHECK_MODE, UPGRADE_MODE, PROVISION_STAGES
+#   and _PROVISION_STOPPED_AT. Reads LOG_COUNTS; sets LOG_MODULE.
 
+# idiom: NO_UNSET makes expanding an unset parameter an error. PIPE_FAIL
+# makes a pipeline fail when any command in it fails, not only the last.
 setopt NO_UNSET PIPE_FAIL
 
 # idiom: ${0:A:h:h}. :A makes the script's path absolute and resolves
 # symlinks; each :h drops the last path component, like dirname.
-# The checkout that holds this script is the one that runs (CR-6), whatever
-# the caller's environment says.
+# The checkout that holds this script is the one that runs, whatever the
+# caller's environment says.
+# idiom: typeset -g declares a global, even from inside a function. The
+# expansion needs no quotes: zsh does not split a parameter's value into
+# words.
 typeset -g DOTFILES_DIR=${0:A:h:h}
 
 typeset -g CHECK_MODE=0 UPGRADE_MODE=0
 
-# The stage order is this array, never file-name order (architecture §4).
+# The stage order is this array, never file-name order.
+# idiom: typeset -ga declares a global (-g) array (-a).
 typeset -ga PROVISION_STAGES=(
   preflight
   defaults
@@ -33,6 +59,9 @@ source $DOTFILES_DIR/lib/converge.zsh
 provision_main() {
   emulate -L zsh; setopt NO_UNSET PIPE_FAIL
 
+  # Parse options.
+  # idiom: (pattern) with both parentheses is the optional full form of a
+  # case label; the short form is pattern).
   local arg
   for arg in "$@"; do
     case $arg in
@@ -47,6 +76,8 @@ provision_main() {
     esac
   done
 
+  # Run, then summarise.
+  # idiom: local -i declares integer parameters.
   local -i stages_rc=0 crashed=0
   # idiom: { try } always { finally }. The always block runs however the try
   # block ends, including a zsh error such as an unset parameter, which
@@ -55,6 +86,9 @@ provision_main() {
     _provision_load_modules && _provision_run_stages
     stages_rc=$?
   } always {
+    # idiom: (( expr )) is an arithmetic test, true when expr is non-zero.
+    # zsh sets TRY_BLOCK_ERROR to 1 inside an always block when the try
+    # block ended in an error.
     if (( TRY_BLOCK_ERROR )); then
       crashed=1
       # Resetting it tells zsh the error is handled, so the run can still
@@ -66,6 +100,7 @@ provision_main() {
     _provision_summary
   }
 
+  # Exit code.
   _provision_total failed
   if (( stages_rc == 2 && ! crashed )); then
     return 2
@@ -77,10 +112,15 @@ provision_main() {
 
 # --- private -----------------------------------------------------------------
 
-# _provision_usage <fd>. Usage is the one text that does not go through log:
-# it is help, not run output (architecture §7).
+# _provision_usage <fd>
+# Usage is the one text that does not go through log: it is help, not run
+# output.
 _provision_usage() {
   emulate -L zsh; setopt NO_UNSET PIPE_FAIL
+  # idiom: print -r prints without interpreting backslash escapes, -u $1
+  # writes to that file descriptor, and -- ends the options.
+  # idiom: a backslash before a newline inside double quotes removes both,
+  # so the text starts on its own line without a leading blank line.
   print -r -u $1 -- "\
 usage: bin/provision [--check] [--upgrade] [--help]
 
@@ -97,13 +137,16 @@ Converges this Mac to the state declared in $DOTFILES_DIR.
 Exit codes: 0 no failure, 1 at least one FAIL, 2 act and re-run, 64 usage error."
 }
 
-# Loads every module before any stage runs, so a missing or broken module
-# stops the run before the first change instead of halfway through.
+# Every module is loaded before any stage runs, so a missing or broken
+# module stops the run before the first change instead of halfway through.
+# The modules are sourced inside this function, so a typeset without -g at
+# a module's top level is local to this function and gone when it returns.
 _provision_load_modules() {
   emulate -L zsh; setopt NO_UNSET PIPE_FAIL
   local stage file
   for stage in $PROVISION_STAGES; do
     file=$DOTFILES_DIR/modules/$stage.zsh
+    # idiom: [[ -r file ]] is true when the file exists and is readable.
     if [[ ! -r $file ]]; then
       log FAIL "$stage" "modules/$stage.zsh is missing — restore it (git status shows what changed), then re-run"
       return 1
@@ -112,6 +155,9 @@ _provision_load_modules() {
       log FAIL "$stage" "modules/$stage.zsh failed to load — fix the error above, then re-run"
       return 1
     fi
+    # idiom: $+name expands to 1 when name is set and 0 when it is not.
+    # functions is the special associative array of defined functions,
+    # keyed by name.
     if (( ! $+functions[mod_${stage}_run] )); then
       log FAIL "$stage" "modules/$stage.zsh does not define mod_${stage}_run — define it, then re-run"
       return 1
@@ -119,8 +165,8 @@ _provision_load_modules() {
   done
 }
 
-# Runs the stages in order and returns the first non-zero stage status,
-# reduced to 1 (failed) or 2 (bail-out).
+# Stops at the first non-zero stage status and returns it, reduced to
+# 1 (failed) or 2 (bail-out).
 _provision_run_stages() {
   emulate -L zsh; setopt NO_UNSET PIPE_FAIL
   local stage
@@ -128,6 +174,9 @@ _provision_run_stages() {
   for stage in $PROVISION_STAGES; do
     _provision_total failed; failed_before=$REPLY
 
+    # Run the stage.
+    # idiom: mod_${stage}_run. The command name is built by expansion, then
+    # looked up as a function.
     # Read through `if`, so $? in the else branch is the stage's own status.
     if mod_${stage}_run; then
       LOG_MODULE=provision
@@ -138,6 +187,7 @@ _provision_run_stages() {
     LOG_MODULE=provision
     _PROVISION_STOPPED_AT=$stage
 
+    # Classify the status.
     if (( rc == 2 )); then
       return 2
     fi
@@ -145,8 +195,8 @@ _provision_run_stages() {
     if (( rc != 1 )); then
       log FAIL "$stage" "mod_${stage}_run returned $rc, but a module returns 0, 1 or 2 — this is a bug in modules/$stage.zsh"
     elif (( REPLY == failed_before )); then
-      # Exit code 1 means "at least one FAIL" (architecture §3), so a silent
-      # failure gets its line here.
+      # Exit code 1 means "at least one FAIL", so a silent failure gets its
+      # line here.
       log FAIL "$stage" "mod_${stage}_run returned 1 without a FAIL line — this is a bug in modules/$stage.zsh"
     fi
     return 1
@@ -154,14 +204,19 @@ _provision_run_stages() {
 }
 
 # _provision_total <counter>: sums one counter over every module, into REPLY.
+# idiom: REPLY is the conventional parameter for handing a value back from
+# a function without a subshell.
 _provision_total() {
   emulate -L zsh; setopt NO_UNSET PIPE_FAIL
   local key
   local -i total=0
   # idiom: ${(k)assoc} expands to the keys of an associative array.
   for key in ${(k)LOG_COUNTS}; do
-    # ${key##*:} strips the longest prefix ending in ':', leaving the counter;
-    # module names such as defaults.dock contain dots, never colons.
+    # idiom: ${key##*:} strips the longest prefix ending in ':', leaving
+    # the counter. Module names such as defaults.dock contain dots, never
+    # colons.
+    # idiom: in [[ ]], the right side of == is a pattern. A counter name
+    # has no pattern characters, so it matches literally.
     [[ ${key##*:} == $1 ]] && (( total += LOG_COUNTS[$key] ))
   done
   REPLY=$total
@@ -180,9 +235,13 @@ _provision_summary() {
   else
     log NOTE run "$changed changed · $ok ok · $failed failed"
   fi
+  # idiom: [[ -n string ]] is true when the string is not empty.
   if [[ -n $_PROVISION_STOPPED_AT ]]; then
     log NOTE '' "stopped at $_PROVISION_STOPPED_AT — fix what it reported, then re-run"
   fi
 }
 
+# The last command in the file, so its return status is the script's exit
+# status.
+# idiom: "$@" expands to every argument, each as its own word.
 provision_main "$@"

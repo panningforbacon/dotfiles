@@ -1,5 +1,5 @@
 #!/bin/zsh -f
-# lib/log.zsh: the only code that prints (ADR-0009, docs/architecture.md §7).
+# lib/log.zsh: the only code that prints.
 # Sourced by bin/provision; not executed on its own.
 #
 #   log_start <module> <item-count>     ▶ header; sets LOG_MODULE
@@ -7,11 +7,33 @@
 #   log_finish                          ■ header with LOG_MODULE's counts
 #
 # An empty subject prints the message alone, for the compact settings form.
+#
+# at source: loads zsh/datetime and defines the status table, the header
+#   tags, LOG_MODULE and LOG_COUNTS. Prints nothing.
+# calls:
+#   log_start
+#   ├── _log_misuse
+#   └── _log_emit
+#   log
+#   ├── _log_misuse
+#   ├── _log_count
+#   └── _log_emit
+#   log_finish
+#   └── _log_emit
+# contract: each call prints one line, FAIL to stderr and the rest to
+#   stdout. log_start and log return 1 on a malformed call, after printing
+#   a FAIL line of their own.
+ 
+# Provides the strftime builtin and $EPOCHSECONDS, so no `date` process is
+# started per line.
 
 zmodload zsh/datetime    # strftime builtin and $EPOCHSECONDS: no `date` process per line
 
 # Status → "fd:SGR:counter". SGR is the ANSI color code; an empty field means
-# no color or no counter. Adding a status is one row here plus one in §8.5.
+# no color or no counter. Adding a status is one row here; the documented
+# list of statuses needs the same row.
+# idiom: typeset -gA declares an associative array (-A) that is global (-g)
+# even if this file is sourced from inside a function.
 typeset -gA _LOG_STATUS=(
   OK       '1:2:ok'
   CHANGED  '1:32:changed'
@@ -28,41 +50,62 @@ typeset -g _LOG_START_TAG='▶      '
 typeset -g _LOG_FINISH_TAG='■      '
 typeset -g _LOG_HEADER_SGR='1'
 
-typeset -g  LOG_MODULE=provision    # lines outside any module (e.g. the summary) set this directly
-typeset -gA LOG_COUNTS              # "module:counter" → count; read by log_finish and the run summary
+# Lines outside any module (e.g. the summary) set this directly.
+typeset -g  LOG_MODULE=provision
+# "module:counter" → count; read by log_finish and the run summary.
+typeset -gA LOG_COUNTS
 
 log_start() {
   emulate -L zsh
-  # <-> is a zsh glob that matches any non-negative integer.
+
+  # Reject a malformed call.
+  # idiom: inside (( )), a bare # is the argument count, the same as $#.
+  # idiom: <-> is a zsh glob that matches any non-negative integer.
   if (( # != 2 )) || [[ $2 != <-> ]]; then
     _log_misuse "log_start got '$*'" "call log_start <module> <item-count>"
     return 1
   fi
+
+  # Zero the module's counters.
   LOG_MODULE=$1
   local row
+  # idiom: ${(v)assoc} expands to the values of an associative array.
   for row in ${(v)_LOG_STATUS}; do
-    # ${row##*:} strips the longest prefix ending in ':', leaving the counter.
+    # idiom: ${row##*:} strips the longest prefix ending in ':', leaving the counter.
     [[ -n ${row##*:} ]] && LOG_COUNTS[${LOG_MODULE}:${row##*:}]=0
   done
+
+  # Print the header.
   _log_emit 1 $_LOG_HEADER_SGR $_LOG_START_TAG "start — $2 items"
 }
 
 log() {
   emulate -L zsh
+
+  # Reject a malformed
   if (( # != 3 )); then
     _log_misuse "expected 3 arguments, got $#" "call log STATUS subject message"
     return 1
   fi
   # Not `status`: in zsh that is a read-only alias of $?.
   local log_status=$1 subject=$2 message=$3
+
+  # Look up the status.
+  # idiom: ${name-} expands to an empty string when name (here, the key) is unset.
   local row=${_LOG_STATUS[$log_status]-}
   if [[ -z $row ]]; then
+  # idiom: (k) expands to the keys, (o) sorts them, (@) keeps them as
+  # separate elements; the outer (j:, :) joins the elements with ", ".
     _log_misuse "unknown status '$log_status' for '$subject'" "use one of ${(j:, :)${(@ok)_LOG_STATUS}}"
     return 1
   fi
-  # (@s.:.) splits on ':' and keeps empty fields, which NOTE's row relies on.
+  # idiom: (s.:.) splits on ':'; (@) inside double quotes keeps the empty
+  # fields, which NOTE's row relies on.
   local -a fields=( "${(@s.:.)row}" )
+  # idiom: zsh arrays index from 1, and $fields[1] needs no braces.
   local fd=$fields[1] sgr=$fields[2] counter=$fields[3]
+
+  # Count and print.
   [[ -n $counter ]] && _log_count $counter
   if [[ -n $subject ]]; then
     _log_emit $fd "$sgr" $log_status "$subject: $message"
@@ -74,15 +117,16 @@ log() {
 log_finish() {
   emulate -L zsh
   local module=$LOG_MODULE
-  # ${module}:changed, never $module:changed: zsh reads an unbraced $module:c…
-  # or $module:f… as a history modifier, so the lookup would silently miss.
+  # idiom: ${module}:changed, never $module:changed. zsh reads an unbraced
+  # $module:c… or $module:f… as a history modifier, so the lookup would silently miss.
+  # idiom: ${name:-0} expands to 0 when name is unset or empty.
   _log_emit 1 $_LOG_HEADER_SGR $_LOG_FINISH_TAG \
     "finish — ${LOG_COUNTS[${module}:changed]:-0} changed · ${LOG_COUNTS[${module}:ok]:-0} ok · ${LOG_COUNTS[${module}:failed]:-0} failed"
 }
 
 # --- private -----------------------------------------------------------------
 
-# A broken call to the logger is itself a failure, so a typo fails the run (FR-15.1).
+# A broken call to the logger is itself a failure, so a typo fails the run.
 _log_misuse() {
   emulate -L zsh
   _log_count failed
@@ -101,21 +145,31 @@ _log_count() {
 _log_emit() {
   emulate -L zsh
   local fd=$1 sgr=$2 tag=$3 text=$4
+
+  # Build the columns.
   _log_now;              local now=$REPLY
   _log_pad 7  $tag;      local tag_col=$REPLY
   _log_pad 16 "[$LOG_MODULE]"; local module_col=$REPLY
+
+  # Color.
   local line="$now  $tag_col  $module_col  $text"
   if [[ -n $sgr ]] && _log_color_on $fd; then
     line=$'\e['"${sgr}m${line}"$'\e[0m'
   fi
-  # print -r: no backslash escapes, so messages print exactly as given.
+
+  # Print.
+  # idiom: print -r disables backslash escapes, so messages print exactly as
+  # given. -u $fd writes to that file descriptor; -- ends the options.
   print -r -u $fd -- "$line"
 }
 
-# Right-pads to a width but never truncates; zsh's ${(r:n:)x} would cut long names.
-# Returns through $REPLY (zsh convention) to avoid a subshell per column.
+# Right-pads to a width but never truncates.
+# Returns through $REPLY, the zsh convention, to avoid a subshell per column.
 _log_pad() {
   emulate -L zsh
+  # idiom: ${#2} is the length of $2. ${(r:N:)2} pads $2 on the right to N
+  # characters but also cuts anything longer, which would truncate long
+  # names. The length test keeps it to the padding case.
   if (( ${#2} < $1 )); then
     REPLY=${(r:$1:)2}
   else
@@ -125,11 +179,14 @@ _log_pad() {
 
 _log_now() {
   emulate -L zsh
+  # idiom: strftime -s NAME stores the formatted time in NAME instead of printing it.
   strftime -s REPLY '%H:%M:%S' $EPOCHSECONDS
 }
 
-# Color per stream (FR-15.7): only on a terminal, and only if NO_COLOR is unset or empty.
+# Color is decided per stream: only on a terminal, and only if NO_COLOR is
+# unset or empty.
 _log_color_on() {
   emulate -L zsh
+  # idiom: -t N is true when file descriptor N is open on a terminal.
   [[ -t $1 && -z ${NO_COLOR:-} ]]
 }
