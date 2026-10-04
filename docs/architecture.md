@@ -300,6 +300,146 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | DEC-35 | Dotfile linking per ADR-0007: own code, one symlink per file, git config split | PO | ADR-0007 |
 | DEC-36 | License: MIT | PO | `LICENSE` (sprint 1, issue 1) |
 
+## 12. Code comments
+
+The scripts are read by someone learning zsh from them. Comments serve that reader. This section applies to every zsh file the project owns: `bootstrap.zsh`, `bin/`, `lib/`, `modules/` and `scripts/`. It does not apply to `tests/vendor/`.
+
+A file contains four kinds of comment and nothing else:
+
+| Kind | Where | Form | Says |
+| --- | --- | --- | --- |
+| Header notes | End of the file header | Labelled lines and a call tree | How the file is put together |
+| Event heading | Above a block | A few words ending in a period | What stage comes next |
+| Aside | Under a heading, or above a line | One or two plain sentences | What the code cannot say for itself |
+| Idiom note | Above the line it explains | Starts `# idiom:` | What a piece of zsh syntax means |
+
+Two things look like comments and are not covered: lines a tool reads (the shebang, `# shellcheck` directives) are code, and function signature lines (§12.2, §12.6) are kept as they are.
+
+### 12.1 Rules for every comment
+
+- **No citations.** A comment never points at a document or an ID: no ADR numbers, section numbers (§), requirement or change-request IDs (FR-, NFR-, CR-), decision IDs (DEC-), metric IDs (M2, M4), spike IDs (S-), sprint or issue numbers. If a fact needs its citation to make sense, state the fact plainly. The reasoning stays in `docs/`; the code says what is true.
+- **No restating.** A comment that says what the code already says is deleted. Header notes are the one exception (§12.2).
+- **Tone.** Quiet and factual, as if said to a new colleague. No jokes, no metaphors, no addressing the reader as "you".
+- **Width.** Comments wrap at 78 columns, indentation included. The usage line in a file header is not wrapped.
+- **Trailing comments.** A comment may follow code on the same line only if the whole line fits in 78 columns. Otherwise it goes above the line.
+
+### 12.2 File header
+
+The header is one comment block, in this order:
+
+1. The shebang.
+2. The purpose line: `# <path>: <what the file is for>.`
+3. How the file is used: `# Sourced by bin/provision; not executed on its own.`
+4. One usage line per public function, indented three spaces.
+5. Header asides: facts about the file as a whole.
+6. An empty comment line, then the header notes.
+
+**Header notes** teach how a zsh file is structured and how it reaches other files. They use these labels, in this order. A label with nothing to say is left out.
+
+| Label | Content |
+| --- | --- |
+| `# at source:` | What executes when the file is sourced (`zmodload`, `typeset`, top-level calls), as opposed to what is only defined. In a file that is executed, the label is `# at run:`. |
+| `# calls:` | A call tree in the style of the Unix `tree` command, drawn with box-drawing characters (`├──`, `└──`, `│`). One tree per public function, children in call order. Only functions defined in this file. A function that appears twice is expanded the first time only. |
+| `# outside:` | Functions this file calls but does not define. Names only. |
+| `# contract:` | For the public functions: return codes, what is left in `$REPLY`, what is printed. |
+| `# globals:` | Global parameters this file defines, reads or writes. |
+
+Rules for header notes:
+
+- **Only what the file shows.** A note states nothing that cannot be checked against the file it sits in. It does not name the file an outside function lives in, and it does not describe load order. The sourcing line (item 3) is the one cross-file statement a header makes.
+- **In every file.** Header notes are written even where they repeat a pattern found across the repo, such as the `mod_<name>_run` skeleton.
+- **About 15 lines.** When the notes run longer, collapse the deepest level of the tree first, then drop `globals:`, then drop `outside:`. The contract is never cut.
+- **The tree shows who calls whom, not when.** A function that runs only on one branch appears next to its siblings without a condition.
+- **Contracts appear twice.** A public function's contract is stated in the header and next to the function. The two must agree. A private function's contract is stated next to the function only.
+
+Example:
+
+```zsh
+#!/bin/zsh -f
+# modules/preflight.zsh: refuses unsupported hardware and macOS versions
+# before any stage changes the machine.
+# Sourced by bin/provision; not executed on its own.
+#
+# This stage only reads. A refusal is a FAIL line plus return 2, in check
+# mode too: it is not a manual stop, so it never becomes ACTION or DIFF.
+#
+# at source: defines two global arrays and the functions; runs nothing.
+# calls:
+#   mod_preflight_run
+#   ├── _preflight_check_hardware
+#   │   ├── _preflight_probe_arm64
+#   │   └── _preflight_is_arm64
+#   └── _preflight_check_macos
+#       ├── _preflight_probe_product_version
+#       ├── _preflight_macos_major
+#       └── _preflight_macos_tier
+# outside: log_start, log, log_finish.
+# contract: mod_preflight_run returns 0 to continue, 2 to refuse. Helpers
+#   answer through $REPLY.
+# globals: reads PREFLIGHT_VERIFIED_MAJORS and PREFLIGHT_TOLERATED_MAJORS.
+```
+
+### 12.3 Event headings
+
+A short line announcing what the next block does, like a stage in a sequence: `# Clone.` `# Verify.` `# Check mode: report and leave.`
+
+- Used only where a function has distinct stages. A function that does one thing has none.
+- Placed directly above the block, at the block's indentation.
+
+### 12.4 Asides
+
+An aside carries what the code cannot say: why it is done this way, what is deliberately not done, what would go wrong otherwise.
+
+- Placed directly under an event heading, or directly above the line it concerns.
+- Short and plain. One fact per sentence.
+- An aside is never dropped for being inconvenient to word. If a rewrite changes its wording, the fact survives.
+
+### 12.5 Idiom notes
+
+An idiom note names and explains zsh syntax a learner would not guess: parameter expansion flags, glob qualifiers, subscript flags, test operators, `exec`, quoting forms.
+
+- Starts `# idiom:` and sits directly above the line that uses the syntax.
+- Written at the first occurrence in each file. Files are read on their own, so a note in one file does not excuse another.
+- When a comment mixes syntax with a reason, it is split: the reason becomes an aside, the syntax an idiom note.
+- Traps get a note even when the syntax looks ordinary. Example: `output=$(cmd)` carries the status of `cmd`, and `local output=$(cmd)` does not.
+
+**Excluded idioms.** These appear in nearly every file and are taken as known. They get no idiom note:
+
+| Syntax | Meaning |
+| --- | --- |
+| `emulate -L zsh`, with any `setopt` on the same line | Resets options to zsh defaults for the length of the function, then sets the listed ones, also for that function only |
+| `print -r --` | Prints without interpreting backslash escapes; `--` ends the options |
+| `local -i` | Declares an integer |
+| `typeset -g`, `-ga`, `-gA` | Declares a global parameter, array or associative array, even when the file is sourced from inside a function |
+| `${name:-word}` | Expands to `word` when `name` is unset or empty |
+
+An idiom joins this list when it both recurs across the repo and is familiar to the reader. Recurrence alone is not enough: a rare-looking form such as `<->` or a bare `#` inside `(( ))` keeps its note.
+
+### 12.6 Function comments
+
+- A function that takes arguments has a signature line directly above it: `# _name <arg> <arg>`. The description starts on the next line.
+- One line, `# Private helpers.`, separates the public functions from the private ones.
+- A function that needs no signature and no aside has no comment.
+
+Example of a function body:
+
+```zsh
+  # Clone.
+  # Output captured, so git's message fits inside one FAIL line.
+  # GIT_TERMINAL_PROMPT=0: git answers a wrong URL with a username prompt,
+  # which with output hidden would look like a hang. This makes it a failure.
+  if ! output=$(GIT_TERMINAL_PROMPT=0 $git clone --quiet -- $url $dir 2>&1); then
+  ...
+  # Verify.
+  # CHANGED is only logged for a change that was read back.
+  if [[ ! -f $dir/bin/provision ]]; then
+```
+
+### 12.7 Comment-only changes
+
+- A change that rewrites comments leaves the code byte-for-byte identical. The check is mechanical: with comment lines removed, the old and new files do not differ, and `zsh -n` passes.
+- A comment found to contradict the code is not fixed in a comment-only change. Neither side is edited; the contradiction is reported, and the fix is a change of its own.
+
 ## Changelog
 
 | Version | Date | Change |
@@ -310,3 +450,4 @@ Preflight asks for the admin password once (`sudo -v`). A background loop refres
 | 1.1 | 2026-10-01 | §4: summary lines, modules loaded before the first stage, runner `FAIL`s. §7: usage-text exception (sprint 1, issue 5). |
 | 1.2 | 2026-10-02 | §3: exit code 2 covers preflight refusals and takes precedence over 1. §6: preflight refusals are `FAIL` lines, never `ACTION` or `DIFF` (sprint 1, preflight story). |
 | 1.3 | 2026-10-03 | §3: loader steps updated for check mode without a checkout, the Command Line Tools completion check, and the occupied-directory `FAIL` (sprint 1, issue 8; ADR-0003 v0.3). |
+| 1.4 | 2026-10-04 | §12 added: code comment standard (four comment kinds, header notes with call tree, idiom exclusions). |
